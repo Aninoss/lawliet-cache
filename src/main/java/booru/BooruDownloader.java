@@ -1,6 +1,5 @@
 package booru;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +15,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import util.InternetUtil;
 import util.NSFWUtil;
 import util.StringUtil;
@@ -23,12 +24,14 @@ import util.TimeUtil;
 
 public class BooruDownloader {
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
+
     public static final int PAGE_LIMIT = 999;
 
     private final OkHttpClient client = new OkHttpClient();
     private final BooruFilter booruFilter = new BooruFilter();
     private final LoadingCache<String, String> httpCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(Duration.ofMinutes(30))
+            .maximumSize(50)
             .build(new CacheLoader<>() {
                 @Override
                 public String load(@NonNull String url) throws Exception {
@@ -69,7 +72,14 @@ public class BooruDownloader {
 
         String url = "https://" + domain + "/index.php?page=dapi&s=post&q=index&limit=" + PAGE_LIMIT + "&tags=" + searchTermEncoded;
 
-        String data = httpCache.get(url);
+        String data;
+        try {
+            data = httpCache.get(url);
+        } catch (Throwable e) {
+            LOGGER.error("Error for domain {}:\n{}", domain);
+            return Optional.empty();
+        }
+
         if (!data.contains("count=\"")) {
             return Optional.empty();
         }
@@ -109,9 +119,15 @@ public class BooruDownloader {
                                                         List<String> skippedResults, int maxSize
     ) throws ExecutionException {
         String url = "https://" + domain + "/index.php?page=dapi&s=post&q=index&limit=" + PAGE_LIMIT + "&json=1&tags=" + searchTerm + "&pid=" + page;
-        String content = httpCache.get(url);
-
-        JSONArray data = new JSONArray(content);
+        String content = null;
+        JSONArray data;
+        try {
+            content = httpCache.get(url);
+            data = new JSONArray(content);
+        } catch (Throwable e) {
+            LOGGER.error("Error for domain {}:\n{}", domain, content);
+            return Optional.empty();
+        }
 
         int count = Math.min(data.length(), PAGE_LIMIT);
         if (count == 0) {
@@ -137,7 +153,12 @@ public class BooruDownloader {
                 }
             }
 
-            boolean isExplicit = postData.getString("rating").startsWith("e");
+            boolean isExplicit;
+            if (postData.has("rating") && postData.get("rating") instanceof String) {
+                isExplicit = postData.getString("rating").startsWith("e");
+            } else {
+                return Optional.empty();
+            }
 
             if ((postIsImage || canBeVideo) &&
                     (!animatedOnly || postIsGif || !postIsImage) &&
