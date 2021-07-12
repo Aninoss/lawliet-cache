@@ -6,12 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import core.WebCache;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -28,20 +23,12 @@ public class BooruDownloader {
 
     public static final int PAGE_LIMIT = 999;
 
-    private final OkHttpClient client = new OkHttpClient();
     private final BooruFilter booruFilter = new BooruFilter();
-    private final LoadingCache<String, String> httpCache = CacheBuilder.newBuilder()
-            .maximumSize(50)
-            .build(new CacheLoader<>() {
-                @Override
-                public String load(@NonNull String url) throws Exception {
-                    Request request = new Request.Builder()
-                            .url(url)
-                            .build();
+    private final WebCache webCache;
 
-                    return client.newCall(request).execute().body().string();
-                }
-            });
+    public BooruDownloader(WebCache webCache) {
+        this.webCache = webCache;
+    }
 
     public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, String searchTermExtra,
                                            String imageTemplate, boolean animatedOnly, boolean canBeVideo,
@@ -74,7 +61,7 @@ public class BooruDownloader {
 
         String data;
         try {
-            data = httpCache.get(url);
+            data = webCache.get(url);
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}:\n{}", domain);
             return Optional.empty();
@@ -122,7 +109,7 @@ public class BooruDownloader {
         String content = null;
         JSONArray data;
         try {
-            content = httpCache.get(url);
+            content = webCache.get(url);
             data = new JSONArray(content);
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}:\n{}", domain, content);

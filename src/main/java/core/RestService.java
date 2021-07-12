@@ -9,6 +9,8 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 @Path("")
 @Singleton
@@ -16,7 +18,13 @@ public class RestService {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(RestService.class);
 
-    private final BooruDownloader booruDownloader = new BooruDownloader();
+    private final JedisPool jedisPool = new JedisPool(
+            buildPoolConfig(),
+            System.getenv("REDIS_HOST"),
+            Integer.parseInt(System.getenv("REDIS_PORT"))
+    );
+    private final WebCache webCache = new WebCache(jedisPool);
+    private final BooruDownloader booruDownloader = new BooruDownloader(webCache);
 
     @GET
     @Path("/ping")
@@ -47,6 +55,14 @@ public class RestService {
             LOGGER.error("Error in /booru", e);
             throw e;
         }
+    }
+
+    private JedisPoolConfig buildPoolConfig() {
+        final JedisPoolConfig poolConfig = new JedisPoolConfig();
+        poolConfig.setMaxTotal(32);
+        poolConfig.setMaxIdle(32);
+        poolConfig.setMinIdle(0);
+        return poolConfig;
     }
 
 }
