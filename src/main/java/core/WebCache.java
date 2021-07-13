@@ -8,9 +8,11 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import util.SerializeUtil;
 
 public class WebCache {
 
@@ -28,7 +30,7 @@ public class WebCache {
         this.jedisPool = jedisPool;
     }
 
-    public String get(String url) throws IOException {
+    public HttpResponse get(String url) throws IOException {
         Object lock;
         try {
             lock = lockCache.get(url);
@@ -36,24 +38,30 @@ public class WebCache {
             throw new RuntimeException(e);
         }
 
-        String content;
+        HttpResponse httpResponse;
         synchronized (lock) {
-            try(Jedis jedis = jedisPool.getResource()) {
-                String key = "web:" + url;
-                content = jedis.get(key);
-                if (content == null) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                byte[] key = ("webresponse:" + url).getBytes();
+                byte[] data = jedis.get(key);
+                if (data == null) {
                     Request request = new Request.Builder()
                             .url(url)
                             .build();
 
-                    content = client.newCall(request).execute().body().string();
-                    jedis.set(key, content);
-                    jedis.expire(key, Duration.ofMinutes(5).toSeconds());
+                    try (Response response = client.newCall(request).execute()) {
+                        httpResponse = new HttpResponse()
+                                .setCode(response.code())
+                                .setBody(response.body().string());
+                        jedis.set(key, SerializeUtil.serialize(httpResponse));
+                        jedis.expire(key, Duration.ofMinutes(5).toSeconds());
+                    }
+                } else {
+                    httpResponse = (HttpResponse) SerializeUtil.unserialize(data);
                 }
             }
         }
 
-        return content;
+        return httpResponse;
     }
 
 }

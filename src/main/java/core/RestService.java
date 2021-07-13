@@ -1,5 +1,6 @@
 package core;
 
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import booru.BooruDownloader;
 import booru.BooruImage;
@@ -53,6 +54,19 @@ public class RestService {
             ).orElse(null);
         } catch (Throwable e) {
             LOGGER.error("Error in /booru", e);
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/webcache")
+    @Consumes(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.APPLICATION_JSON)
+    public HttpResponse webcache(String url) throws IOException {
+        try {
+            return webCache.get(url);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /webcache", e);
             throw e;
         }
     }

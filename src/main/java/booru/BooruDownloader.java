@@ -61,7 +61,7 @@ public class BooruDownloader {
 
         String data;
         try {
-            data = webCache.get(url);
+            data = webCache.get(url).getBody();
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}:\n{}", domain);
             return Optional.empty();
@@ -109,7 +109,7 @@ public class BooruDownloader {
         String content = null;
         JSONArray data;
         try {
-            content = webCache.get(url);
+            content = webCache.get(url).getBody();
             data = new JSONArray(content);
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}:\n{}", domain, content);
