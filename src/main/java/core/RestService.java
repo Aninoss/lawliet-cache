@@ -46,9 +46,9 @@ public class RestService {
                     booruRequest.getSearchTerm(),
                     booruRequest.getSearchTermExtra(),
                     booruRequest.getImageTemplate(),
-                    booruRequest.isAnimatedOnly(),
-                    booruRequest.canBeVideo(),
-                    booruRequest.isExplicit(),
+                    booruRequest.getAnimatedOnly(),
+                    booruRequest.getCanBeVideo(),
+                    booruRequest.getExplicit(),
                     booruRequest.getFilters(),
                     booruRequest.getSkippedResults()
             ).orElse(null);
