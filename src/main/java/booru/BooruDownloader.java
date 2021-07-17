@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 import core.WebCache;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.JedisPool;
 import util.InternetUtil;
 import util.NSFWUtil;
 import util.StringUtil;
@@ -23,17 +23,18 @@ public class BooruDownloader {
 
     public static final int PAGE_LIMIT = 999;
 
-    private final BooruFilter booruFilter = new BooruFilter();
+    private final BooruFilter booruFilter;
     private final WebCache webCache;
 
-    public BooruDownloader(WebCache webCache) {
+    public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
         this.webCache = webCache;
+        this.booruFilter = new BooruFilter(jedisPool);
     }
 
     public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, String searchTermExtra,
                                            String imageTemplate, boolean animatedOnly, boolean canBeVideo,
                                            boolean explicit, List<String> filters, List<String> skippedResults
-    ) throws ExecutionException {
+    ) {
         searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
 
         return getPicture(guildId, domain, searchTerm, searchTermExtra, imageTemplate, animatedOnly, canBeVideo,
@@ -44,7 +45,7 @@ public class BooruDownloader {
                                             String imageTemplate, boolean animatedOnly, boolean canBeVideo,
                                             boolean explicit, int remaining, boolean softMode,
                                             List<String> additionalFilters, List<String> skippedResults
-    ) throws ExecutionException {
+    ) {
         while (searchTerm.contains("  ")) searchTerm = searchTerm.replace("  ", " ");
         searchTerm = searchTerm.replace(", ", ",");
         searchTerm = searchTerm.replace("; ", ",");
@@ -63,7 +64,7 @@ public class BooruDownloader {
         try {
             data = webCache.get(url).getBody();
         } catch (Throwable e) {
-            LOGGER.error("Error for domain {}:\n{}", domain);
+            LOGGER.error("Error for domain {}", domain);
             return Optional.empty();
         }
 
@@ -104,7 +105,7 @@ public class BooruDownloader {
                                                         String imageTemplate, boolean animatedOnly, boolean canBeVideo,
                                                         boolean explicit, List<String> filters,
                                                         List<String> skippedResults, int maxSize
-    ) throws ExecutionException {
+    ) {
         String url = "https://" + domain + "/index.php?page=dapi&s=post&q=index&limit=" + PAGE_LIMIT + "&json=1&tags=" + searchTerm + "&pid=" + page;
         String content = null;
         JSONArray data;

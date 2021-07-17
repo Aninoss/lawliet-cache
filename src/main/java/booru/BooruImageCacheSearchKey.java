@@ -1,30 +1,40 @@
 package booru;
 
-import java.util.ArrayList;
+import java.time.Duration;
+import redis.clients.jedis.Jedis;
 
 public class BooruImageCacheSearchKey {
 
     public static final int MAX_CAP = 250;
 
-    private final ArrayList<String> imageURLs = new ArrayList<>();
+    private final Jedis jedis;
+    private final long guildId;
+    private final String domain;
+    private final String searchKey;
 
-    public boolean contains(String imageURL) {
-        return imageURLs.contains(imageURL);
+    public BooruImageCacheSearchKey(Jedis jedis, long guildId, String domain, String searchKey) {
+        this.jedis = jedis;
+        this.guildId = guildId;
+        this.domain = domain;
+        this.searchKey = searchKey;
+    }
+
+    public synchronized boolean contains(String imageURL) {
+        return jedis.zscore(getKey(), imageURL) != null;
     }
 
     public synchronized void trim(int maxSize) {
-        while (imageURLs.size() > Math.min(MAX_CAP, maxSize)) {
-            imageURLs.remove(0);
-        }
+        int cap = Math.min(MAX_CAP, maxSize);
+        jedis.zremrangeByRank(getKey(), 0, -1 - cap);
     }
 
     public synchronized void add(String imageURL) {
-        if (!imageURLs.contains(imageURL)) {
-            imageURLs.add(imageURL);
-            if (imageURLs.size() > MAX_CAP) {
-                imageURLs.remove(0);
-            }
-        }
+        jedis.zadd(getKey(), System.currentTimeMillis(), imageURL);
+        jedis.expire(getKey(), Duration.ofMinutes(30).toSeconds());
+    }
+
+    private String getKey() {
+        return "booruselected:" + guildId + ":" + domain + ":" + searchKey;
     }
 
 }

@@ -1,7 +1,6 @@
 package core;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 import booru.BooruDownloader;
 import booru.BooruImage;
 import booru.BooruRequest;
@@ -25,7 +24,7 @@ public class RestService {
             Integer.parseInt(System.getenv("REDIS_PORT"))
     );
     private final WebCache webCache = new WebCache(jedisPool);
-    private final BooruDownloader booruDownloader = new BooruDownloader(webCache);
+    private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
 
     @GET
     @Path("/ping")
@@ -38,7 +37,7 @@ public class RestService {
     @Path("/booru")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public BooruImage booru(BooruRequest booruRequest) throws ExecutionException {
+    public BooruImage booru(BooruRequest booruRequest) {
         try {
             return booruDownloader.getPicture(
                     booruRequest.getGuildId(),

@@ -3,12 +3,11 @@ package core;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -16,8 +15,8 @@ import util.SerializeUtil;
 
 public class WebCache {
 
-    private final OkHttpClient client = new OkHttpClient();
     private final JedisPool jedisPool;
+    private final OkHttpClient client;
     private final LoadingCache<String, Object> lockCache = CacheBuilder.newBuilder()
             .build(new CacheLoader<>() {
                 @Override
@@ -28,6 +27,17 @@ public class WebCache {
 
     public WebCache(JedisPool jedisPool) {
         this.jedisPool = jedisPool;
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequestsPerHost(25);
+        ConnectionPool connectionPool = new ConnectionPool(5, 10, TimeUnit.SECONDS);
+        this.client = new OkHttpClient.Builder()
+                .connectionPool(connectionPool)
+                .dispatcher(dispatcher)
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .cache(null)
+                .build();
     }
 
     public HttpResponse get(String url) throws IOException {
