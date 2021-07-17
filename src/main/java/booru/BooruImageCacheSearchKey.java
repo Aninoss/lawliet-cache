@@ -1,6 +1,8 @@
 package booru;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import redis.clients.jedis.Jedis;
 
 public class BooruImageCacheSearchKey {
@@ -19,17 +21,20 @@ public class BooruImageCacheSearchKey {
         this.searchKey = searchKey;
     }
 
-    public synchronized boolean contains(String imageURL) {
-        return jedis.zscore(getKey(), imageURL) != null;
+    public List<BooruImageMeta> filter(List<BooruImageMeta> imageURLs) {
+        ArrayList<BooruImageMeta> newImageUrls = new ArrayList<>(imageURLs);
+        List<String> usedImageUrls = jedis.lrange(getKey(), 0, -1);
+        newImageUrls.removeIf(imageMeta -> usedImageUrls.contains(imageMeta.getImageUrl()));
+        return newImageUrls;
     }
 
-    public synchronized void trim(int maxSize) {
+    public void trim(int maxSize) {
         int cap = Math.min(MAX_CAP, maxSize);
-        jedis.zremrangeByRank(getKey(), 0, -1 - cap);
+        jedis.ltrim(getKey(), 0, cap - 1);
     }
 
-    public synchronized void add(String imageURL) {
-        jedis.zadd(getKey(), System.currentTimeMillis(), imageURL);
+    public void add(String imageURL) {
+        jedis.lpush(getKey(), imageURL);
         jedis.expire(getKey(), Duration.ofMinutes(30).toSeconds());
     }
 

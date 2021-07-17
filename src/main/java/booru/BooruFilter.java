@@ -23,7 +23,7 @@ public class BooruFilter {
             /* Delete global duplicate images */
             BooruImageCacheSearchKey booruImageCacheSearchKey = new BooruImageCacheSearchKey(jedis, guildId, domain, searchKey);
             booruImageCacheSearchKey.trim(maxSize);
-            pornImages.removeIf(pornImageMeta -> booruImageCacheSearchKey.contains(pornImageMeta.getImageUrl()));
+            pornImages = booruImageCacheSearchKey.filter(pornImages);
 
             /* Delete duplicate images for this command usage */
             pornImages.removeIf(pornImageMeta -> usedResult.contains(pornImageMeta.getImageUrl()));
