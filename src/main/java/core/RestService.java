@@ -23,8 +23,10 @@ public class RestService {
             System.getenv("REDIS_HOST"),
             Integer.parseInt(System.getenv("REDIS_PORT"))
     );
-    private final WebCache webCache = new WebCache(jedisPool);
+    private final LockManager lockManager = new LockManager();
+    private final WebCache webCache = new WebCache(jedisPool, lockManager);
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
+    private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
 
     @GET
     @Path("/ping")
@@ -66,6 +68,23 @@ public class RestService {
             return webCache.get(url);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/random")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
+    public Integer randomPicker(RandomPickerRequest randomPickerRequest) {
+        try {
+            return randomPicker.pick(
+                    randomPickerRequest.getTag(),
+                    randomPickerRequest.getGuildId(),
+                    randomPickerRequest.getSize()
+            );
+        } catch (Throwable e) {
+            LOGGER.error("Error in /random", e);
             throw e;
         }
     }

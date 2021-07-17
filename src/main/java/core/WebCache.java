@@ -2,13 +2,8 @@ package core;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import okhttp3.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.SerializeUtil;
@@ -16,17 +11,12 @@ import util.SerializeUtil;
 public class WebCache {
 
     private final JedisPool jedisPool;
+    private final LockManager lockManager;
     private final OkHttpClient client;
-    private final LoadingCache<String, Object> lockCache = CacheBuilder.newBuilder()
-            .build(new CacheLoader<>() {
-                @Override
-                public Object load(@NonNull String key) throws Exception {
-                    return new Object();
-                }
-            });
 
-    public WebCache(JedisPool jedisPool) {
+    public WebCache(JedisPool jedisPool, LockManager lockManager) {
         this.jedisPool = jedisPool;
+        this.lockManager = lockManager;
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequestsPerHost(25);
         ConnectionPool connectionPool = new ConnectionPool(5, 10, TimeUnit.SECONDS);
@@ -41,18 +31,14 @@ public class WebCache {
     }
 
     public HttpResponse get(String url) throws IOException {
-        Object lock;
-        try {
-            lock = lockCache.get(url);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+        String key = "webresponse:" + url;
+        Object lock = lockManager.get(key);
 
         HttpResponse httpResponse;
         synchronized (lock) {
             try (Jedis jedis = jedisPool.getResource()) {
-                byte[] key = ("webresponse:" + url).getBytes();
-                byte[] data = jedis.get(key);
+                byte[] keyBytes = key.getBytes();
+                byte[] data = jedis.get(keyBytes);
                 if (data == null) {
                     Request request = new Request.Builder()
                             .url(url)
@@ -62,8 +48,8 @@ public class WebCache {
                         httpResponse = new HttpResponse()
                                 .setCode(response.code())
                                 .setBody(response.body().string());
-                        jedis.set(key, SerializeUtil.serialize(httpResponse));
-                        jedis.expire(key, Duration.ofMinutes(5).toSeconds());
+                        jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
+                        jedis.expire(keyBytes, Duration.ofMinutes(5).toSeconds());
                     }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);

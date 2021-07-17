@@ -20,12 +20,12 @@ public class BooruFilter {
         if (pornImages.size() == 0) return null;
 
         try (Jedis jedis = jedisPool.getResource()) {
-            /* Delete global duplicate images */
+            /* delete global duplicate images */
             BooruImageCacheSearchKey booruImageCacheSearchKey = new BooruImageCacheSearchKey(jedis, guildId, domain, searchKey);
             booruImageCacheSearchKey.trim(maxSize);
             pornImages = booruImageCacheSearchKey.filter(pornImages);
 
-            /* Delete duplicate images for this command usage */
+            /* delete duplicate images for this command usage */
             pornImages.removeIf(pornImageMeta -> usedResult.contains(pornImageMeta.getImageUrl()));
 
             long totalWeight = pornImages.stream().mapToLong(BooruImageMeta::getWeight).sum();
