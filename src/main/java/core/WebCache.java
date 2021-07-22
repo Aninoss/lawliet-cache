@@ -30,7 +30,7 @@ public class WebCache {
                 .build();
     }
 
-    public HttpResponse get(String url) throws IOException {
+    public HttpResponse get(String url, int minutesCached) throws IOException {
         String key = "webresponse:" + url;
         Object lock = lockManager.get(key);
 
@@ -50,7 +50,7 @@ public class WebCache {
                                 .setCode(response.code())
                                 .setBody(response.body().string());
                         jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
-                        jedis.expire(keyBytes, Duration.ofMinutes(5).toSeconds());
+                        jedis.expire(keyBytes, Duration.ofMinutes(minutesCached).toSeconds());
                     }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);

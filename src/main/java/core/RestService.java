@@ -65,7 +65,7 @@ public class RestService {
     @Produces(MediaType.APPLICATION_JSON)
     public HttpResponse webcache(String url) throws IOException {
         try {
-            return webCache.get(url);
+            return webCache.get(url, 5);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
             throw e;
