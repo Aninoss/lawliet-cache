@@ -42,6 +42,7 @@ public class WebCache {
                 if (data == null) {
                     Request request = new Request.Builder()
                             .url(url)
+                            .addHeader("User-Agent", "Lawliet Discord Bot made by Aninoss#7220")
                             .build();
 
                     try (Response response = client.newCall(request).execute()) {
