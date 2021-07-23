@@ -20,6 +20,10 @@ public class RandomPicker {
     }
 
     public synchronized int pick(String tag, long guildId, int size) {
+        if (size <= 1) {
+            return 0;
+        }
+
         String key = "picks:" + tag + ":" + guildId;
         Object lock = lockManager.get(key);
 
