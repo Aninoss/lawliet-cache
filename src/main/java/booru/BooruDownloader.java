@@ -109,19 +109,21 @@ public class BooruDownloader {
 
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
-            int score = boardImage.getScore();
-            boolean postIsImage = InternetUtil.urlContainsImage(fileUrl);
-            boolean postIsGif = fileUrl.endsWith("gif");
-            boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
-            boolean notPending = !boardImage.isPending();
+            if (fileUrl != null) {
+                int score = boardImage.getScore();
+                boolean postIsImage = InternetUtil.urlContainsImage(fileUrl);
+                boolean postIsGif = fileUrl.endsWith("gif");
+                boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
+                boolean notPending = !boardImage.isPending();
 
-            if ((!animatedOnly || postIsGif || !postIsImage) &&
-                    score >= 0 &&
-                    NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
-                    isExplicit == explicit &&
-                    notPending
-            ) {
-                pornImages.add(new BooruImageMeta(fileUrl, score, boardImage));
+                if ((!animatedOnly || postIsGif || !postIsImage) &&
+                        score >= 0 &&
+                        NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
+                        isExplicit == explicit &&
+                        notPending
+                ) {
+                    pornImages.add(new BooruImageMeta(fileUrl, score, boardImage));
+                }
             }
         }
 

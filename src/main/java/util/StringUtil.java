@@ -21,4 +21,28 @@ public class StringUtil {
         return groups.toArray(new String[0]);
     }
 
+    public static boolean stringIsInt(String string) {
+        try {
+            Integer.parseInt(string);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    public static int countMatches(String str, String findStr) {
+        int lastIndex = 0;
+        int count = 0;
+
+        while(lastIndex != -1){
+            lastIndex = str.indexOf(findStr,lastIndex);
+            if(lastIndex != -1){
+                count ++;
+                lastIndex += findStr.length();
+            }
+        }
+
+       return count;
+    }
+
 }

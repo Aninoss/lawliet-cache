@@ -7,6 +7,7 @@ import core.WebCache;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
+import net.kodehawa.lib.imageboards.entities.impl.FurryImage;
 import net.kodehawa.lib.imageboards.entities.impl.GelbooruImage;
 import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
 import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
@@ -47,6 +48,15 @@ public enum BoardType {
             new RealbooruBoard(),
             RealbooruImage.class,
             new RealbooruCounter()
+    ),
+
+    E621(
+            "e621.net",
+            "https://e621.net/posts/",
+            320,
+            DefaultBoards.E621,
+            FurryImage.class,
+            new E621Counter()
     );
 
     private final String domain;
