@@ -10,6 +10,8 @@ import util.SerializeUtil;
 
 public class WebCache {
 
+    public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
+
     private final JedisPool jedisPool;
     private final LockManager lockManager;
     private final OkHttpClient client;
@@ -42,7 +44,7 @@ public class WebCache {
                 if (data == null) {
                     Request request = new Request.Builder()
                             .url(url)
-                            .addHeader("User-Agent", "Lawliet Discord Bot made by Aninoss#7220")
+                            .addHeader("User-Agent", USER_AGENT)
                             .build();
 
                     try (Response response = client.newCall(request).execute()) {
@@ -59,6 +61,10 @@ public class WebCache {
         }
 
         return httpResponse;
+    }
+
+    public OkHttpClient getClient() {
+        return client;
     }
 
 }

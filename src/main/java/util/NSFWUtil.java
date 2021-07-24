@@ -15,8 +15,9 @@ public final class NSFWUtil {
         return str;
     }
 
-    public static boolean stringContainsBannedTags(String str, List<String> additionalFilter) {
-        return !filterPornSearchKey(str, additionalFilter).equalsIgnoreCase(str);
+    public static boolean tagListAllowed(List<String> tagList, List<String> filters) {
+        return tagList.stream()
+                .noneMatch(tag -> filters.stream().anyMatch(tag::equalsIgnoreCase));
     }
 
 }

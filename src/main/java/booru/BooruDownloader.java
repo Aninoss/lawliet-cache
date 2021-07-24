@@ -1,89 +1,83 @@
 package booru;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import core.WebCache;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.kodehawa.lib.imageboards.ImageBoard;
+import net.kodehawa.lib.imageboards.entities.BoardImage;
+import net.kodehawa.lib.imageboards.entities.Rating;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import redis.clients.jedis.JedisPool;
 import util.InternetUtil;
 import util.NSFWUtil;
-import util.StringUtil;
-import util.TimeUtil;
 
 public class BooruDownloader {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
-
-    public static final int PAGE_LIMIT = 999;
-
     private final BooruFilter booruFilter;
+    private final OkHttpClient client;
     private final WebCache webCache;
+    private final Random random = new Random();
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
-        this.webCache = webCache;
         this.booruFilter = new BooruFilter(jedisPool);
+        this.client = webCache.getClient().newBuilder()
+                .addInterceptor(chain -> {
+                    Request request = chain.request();
+                    request = request.newBuilder()
+                            .url(String.format("http://localhost:%s/api/cached_proxy/15", System.getenv("PORT")))
+                            .method("POST", RequestBody.create(MediaType.get("text/plain"), request.url().toString()))
+                            .addHeader("Authorization", System.getenv("AUTH"))
+                            .build();
+                    return chain.proceed(request);
+                })
+                .build();
+        this.webCache = webCache;
+        ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
     public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, String searchTermExtra,
-                                           String imageTemplate, boolean animatedOnly, boolean canBeVideo,
-                                           boolean explicit, List<String> filters, List<String> skippedResults
+                                           boolean animatedOnly, boolean explicit, List<String> filters,
+                                           List<String> skippedResults
     ) {
         searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
+        BoardType boardType = BoardType.fromDomain(domain);
+        if (boardType == null) {
+            throw new NoSuchElementException("No such image board");
+        }
 
-        return getPicture(guildId, domain, searchTerm, searchTermExtra, imageTemplate, animatedOnly, canBeVideo,
+        return getPicture(guildId, boardType, searchTerm, searchTermExtra, animatedOnly,
                 explicit, 2, false, filters, skippedResults);
     }
 
-    private Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, String searchTermExtra,
-                                            String imageTemplate, boolean animatedOnly, boolean canBeVideo,
-                                            boolean explicit, int remaining, boolean softMode,
+    private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, String searchTermExtra,
+                                            boolean animatedOnly, boolean explicit, int remaining, boolean softMode,
                                             List<String> additionalFilters, List<String> skippedResults
     ) {
         while (searchTerm.contains("  ")) searchTerm = searchTerm.replace("  ", " ");
         searchTerm = searchTerm.replace(", ", ",");
         searchTerm = searchTerm.replace("; ", ",");
+        String finalSearchTerm = searchTerm
+                .replace(",", " ")
+                .replace(" ", softMode ? "~ " : " ") +
+                (softMode ? "~" : "") +
+                searchTermExtra;
 
-        String searchTermEncoded = InternetUtil.escapeForURL(
-                searchTerm
-                        .replace(",", " ")
-                        .replace(" ", softMode ? "~ " : " ") +
-                        (softMode ? "~" : "") +
-                        searchTermExtra
-        );
-
-        String url = "https://" + domain + "/index.php?page=dapi&s=post&q=index&limit=" + PAGE_LIMIT + "&tags=" + searchTermEncoded;
-
-        String data;
-        try {
-            data = webCache.get(url, 15).getBody();
-        } catch (Throwable e) {
-            LOGGER.error("Error for domain {}", domain);
-            return Optional.empty();
-        }
-
-        if (!data.contains("count=\"")) {
-            return Optional.empty();
-        }
-        int count = Math.min(20_000 / PAGE_LIMIT * PAGE_LIMIT, Integer.parseInt(StringUtil.extractGroups(data, "count=\"", "\"")[0]));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTerm));
         if (count == 0) {
             if (!softMode) {
-                return getPicture(guildId, domain, searchTerm.replace(" ", "_"), searchTermExtra, imageTemplate,
-                        animatedOnly, canBeVideo, explicit, remaining, true, additionalFilters, skippedResults);
+                return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), searchTermExtra,
+                        animatedOnly, explicit, remaining, true, additionalFilters, skippedResults);
             } else if (remaining > 0) {
                 if (searchTerm.contains(" ")) {
-                    return getPicture(guildId, domain, searchTerm.replace(" ", "_"), searchTermExtra, imageTemplate,
-                            animatedOnly, canBeVideo, explicit, remaining - 1, false,
+                    return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), searchTermExtra,
+                            animatedOnly, explicit, remaining - 1, false,
                             additionalFilters,skippedResults);
                 } else if (searchTerm.contains("_")) {
-                    return getPicture(guildId, domain, searchTerm.replace("_", " "), searchTermExtra, imageTemplate,
-                            animatedOnly, canBeVideo, explicit, remaining - 1, false,
+                    return getPicture(guildId, boardType, searchTerm.replace("_", " "), searchTermExtra,
+                            animatedOnly, explicit, remaining - 1, false,
                             additionalFilters, skippedResults);
                 }
             }
@@ -91,112 +85,59 @@ public class BooruDownloader {
             return Optional.empty();
         }
 
-        Random r = new Random();
-        int page = r.nextInt(count) / PAGE_LIMIT;
-        if (searchTermEncoded.length() == 0)  {
+        int page = random.nextInt(count) / boardType.getMaxLimit();
+        if (finalSearchTerm.length() == 0)  {
             page = 0;
         }
 
-        return getPictureOnPage(guildId, domain, searchTermEncoded, page, imageTemplate, animatedOnly, canBeVideo,
-                explicit, additionalFilters, skippedResults, count - 1);
+        return getPictureOnPage(guildId, boardType, finalSearchTerm, page, animatedOnly, explicit,
+                additionalFilters, skippedResults);
     }
 
-    private Optional<BooruImage> getPictureOnPage(long guildId, String domain, String searchTerm, int page,
-                                                        String imageTemplate, boolean animatedOnly, boolean canBeVideo,
-                                                        boolean explicit, List<String> filters,
-                                                        List<String> skippedResults, int maxSize
+    private Optional<BooruImage> getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
+                                                  boolean animatedOnly, boolean explicit, List<String> filters,
+                                                  List<String> skippedResults
     ) {
-        String url = "https://" + domain + "/index.php?page=dapi&s=post&q=index&limit=" + PAGE_LIMIT + "&json=1&tags=" + searchTerm + "&pid=" + page;
-        String content = null;
-        JSONArray data;
-        try {
-            content = webCache.get(url, 15).getBody();
-            data = new JSONArray(content);
-        } catch (Throwable e) {
-            LOGGER.error("Error for domain {}:\n{}", domain, content);
-            return Optional.empty();
-        }
+        ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
+        List<? extends BoardImage> boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
 
-        int count = Math.min(data.length(), PAGE_LIMIT);
-        if (count == 0) {
+        if (boardImages.isEmpty()) {
             return Optional.empty();
         }
 
         ArrayList<BooruImageMeta> pornImages = new ArrayList<>();
 
-        for (int i = 0; i < count; i++) {
-            JSONObject postData = data.getJSONObject(i);
+        for (BoardImage boardImage : boardImages) {
+            String fileUrl = boardImage.getURL();
+            int score = boardImage.getScore();
+            boolean postIsImage = InternetUtil.urlContainsImage(fileUrl);
+            boolean postIsGif = fileUrl.endsWith("gif");
+            boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
+            boolean notPending = !boardImage.isPending();
 
-            String imageUrl = postData.getString(postData.has("file_url") ? "file_url" : "image");
-
-            long score = 1;
-            boolean postIsImage = InternetUtil.urlContainsImage(imageUrl);
-            boolean postIsGif = imageUrl.endsWith("gif");
-
-            if (postData.has("score") && !postData.isNull("score")) {
-                try {
-                    score = postData.getInt("score");
-                } catch (JSONException e) {
-                    //Ignore
-                }
-            }
-
-            boolean isExplicit;
-            if (postData.has("rating") && postData.get("rating") instanceof String) {
-                isExplicit = postData.getString("rating").startsWith("e");
-            } else {
-                return Optional.empty();
-            }
-
-            if ((postIsImage || canBeVideo) &&
-                    (!animatedOnly || postIsGif || !postIsImage) &&
+            if ((!animatedOnly || postIsGif || !postIsImage) &&
                     score >= 0 &&
-                    !NSFWUtil.stringContainsBannedTags(postData.getString("tags"), filters) &&
-                    isExplicit == explicit
+                    NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
+                    isExplicit == explicit &&
+                    notPending
             ) {
-                pornImages.add(new BooruImageMeta(imageUrl, score, i));
+                pornImages.add(new BooruImageMeta(fileUrl, score, boardImage));
             }
         }
 
-        return Optional.ofNullable(booruFilter.filter(guildId, domain, searchTerm, pornImages, skippedResults, maxSize))
-                .map(pornImageMeta -> getSpecificPictureOnPage(domain, data.getJSONObject(pornImageMeta.getIndex()), imageTemplate));
+        return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, boardImages.size() - 1))
+                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage()));
     }
 
-    private BooruImage getSpecificPictureOnPage(String domain, JSONObject postData, String imageTemplate) {
-        String postURL = "https://" + domain + "/index.php?page=post&s=view&id=" + postData.getInt("id");
-
-        Instant instant;
-        if (postData.has("created_at")) {
-            instant = TimeUtil.parseDateString(postData.getString("created_at"));
-        } else {
-            instant = Instant.now();
-        }
-
-        String fileURL;
-        if (postData.has("file_url")) {
-            fileURL = postData.getString("file_url");
-        } else {
-            fileURL = imageTemplate.replace("%d", postData.get("directory").toString())
-                    .replace("%f", postData.getString("image"));
-        }
-
-        if (fileURL.contains("?")) {
-            fileURL = fileURL.split("\\?")[0];
-        }
-
-        int score = 0;
-        try {
-            score = postData.getInt("score");
-        } catch (JSONException e) {
-            //Ignore
-        }
-
+    private BooruImage createBooruImage(BoardType boardType, BoardImage image) {
+        String fileUrl = image.getURL();
+        String pageUrl = boardType.getPageUrl(image.getId());
         return new BooruImage()
-                .setImageUrl(fileURL)
-                .setPageUrl(postURL)
-                .setScore(score)
-                .setInstant(instant)
-                .setVideo(!InternetUtil.urlContainsImage(fileURL) && !fileURL.endsWith("gif"));
+                .setImageUrl(fileUrl)
+                .setPageUrl(pageUrl)
+                .setScore(image.getScore())
+                .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
+                .setVideo(!InternetUtil.urlContainsImage(fileUrl) && !fileUrl.endsWith("gif"));
     }
 
 }

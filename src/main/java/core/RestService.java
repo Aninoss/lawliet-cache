@@ -7,6 +7,7 @@ import booru.BooruRequest;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.JedisPool;
@@ -46,9 +47,7 @@ public class RestService {
                     booruRequest.getDomain(),
                     booruRequest.getSearchTerm(),
                     booruRequest.getSearchTermExtra(),
-                    booruRequest.getImageTemplate(),
                     booruRequest.getAnimatedOnly(),
-                    booruRequest.getCanBeVideo(),
                     booruRequest.getExplicit(),
                     booruRequest.getFilters(),
                     booruRequest.getSkippedResults()
@@ -68,6 +67,23 @@ public class RestService {
             return webCache.get(url, 5);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/cached_proxy/{minutes}")
+    @Consumes(MediaType.TEXT_PLAIN)
+    public Response cachedProxy(String url, @PathParam("minutes") int minutes) throws IOException {
+        try {
+            HttpResponse httpResponse = webCache.get(url, minutes);
+            if (httpResponse.getCode() / 100 == 2) {
+                return Response.ok(httpResponse.getBody()).build();
+            } else {
+                return Response.status(httpResponse.getCode()).build();
+            }
+        } catch (Throwable e) {
+            LOGGER.error("Error in /webcache_raw", e);
             throw e;
         }
     }

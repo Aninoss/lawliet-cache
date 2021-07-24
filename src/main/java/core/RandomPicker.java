@@ -12,7 +12,7 @@ public class RandomPicker {
 
     private final JedisPool jedisPool;
     private final LockManager lockManager;
-    private final Random r = new Random();
+    private final Random random = new Random();
 
     public RandomPicker(JedisPool jedisPool, LockManager lockManager) {
         this.jedisPool = jedisPool;
@@ -38,7 +38,7 @@ public class RandomPicker {
                         .map(Integer::parseInt)
                         .forEach(options::remove);
 
-                int index = r.nextInt(options.size());
+                int index = random.nextInt(options.size());
                 int n = options.get(index);
                 jedis.lpush(key, String.valueOf(n));
                 jedis.expire(key, Duration.ofMinutes(30).toSeconds());
