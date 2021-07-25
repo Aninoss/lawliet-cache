@@ -8,7 +8,6 @@ import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.impl.FurryImage;
-import net.kodehawa.lib.imageboards.entities.impl.GelbooruImage;
 import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
 import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
 
@@ -21,15 +20,6 @@ public enum BoardType {
             DefaultBoards.R34,
             Rule34Image.class,
             new Rule34Counter()
-    ),
-
-    GELBOORU(
-            "gelbooru.com",
-            "https://gelbooru.com/index.php?page=post&s=view&id=",
-            999,
-            DefaultBoards.GELBOORU,
-            GelbooruImage.class,
-            new GelbooruCounter()
     ),
 
     SAFEBOORU(
