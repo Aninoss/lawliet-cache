@@ -120,7 +120,8 @@ public class BooruDownloader {
                         score >= 0 &&
                         NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
                         isExplicit == explicit &&
-                        notPending
+                        notPending &&
+                        !fileUrl.endsWith("swf")
                 ) {
                     pornImages.add(new BooruImageMeta(fileUrl, score, boardImage));
                 }
