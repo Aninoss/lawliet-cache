@@ -38,47 +38,43 @@ public class BooruDownloader {
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
-    public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, String searchTermExtra,
-                                           boolean animatedOnly, boolean explicit, List<String> filters,
-                                           List<String> skippedResults
-    ) {
+    public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, boolean animatedOnly,
+                                           boolean explicit, List<String> filters, List<String> skippedResults) {
         searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new NoSuchElementException("No such image board");
         }
 
-        return getPicture(guildId, boardType, searchTerm, searchTermExtra, animatedOnly,
+        return getPicture(guildId, boardType, searchTerm, animatedOnly,
                 explicit, 2, false, filters, skippedResults);
     }
 
-    private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, String searchTermExtra,
-                                            boolean animatedOnly, boolean explicit, int remaining, boolean softMode,
+    private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
+                                            boolean explicit, int remaining, boolean softMode,
                                             List<String> additionalFilters, List<String> skippedResults
     ) {
         while (searchTerm.contains("  ")) searchTerm = searchTerm.replace("  ", " ");
         searchTerm = searchTerm.replace(", ", ",");
         searchTerm = searchTerm.replace("; ", ",");
-        String finalSearchTerm = searchTerm
+        StringBuilder finalSearchTerm = new StringBuilder(searchTerm
                 .replace(",", " ")
                 .replace(" ", softMode ? "~ " : " ") +
-                (softMode ? "~" : "") +
-                searchTermExtra;
+                (softMode ? "~" : ""));
+        additionalFilters.forEach(filter -> finalSearchTerm.append(" -").append(filter));
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTerm));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTerm.toString()));
         if (count == 0) {
             if (!softMode) {
-                return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), searchTermExtra,
-                        animatedOnly, explicit, remaining, true, additionalFilters, skippedResults);
+                return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit, remaining,
+                        true, additionalFilters, skippedResults);
             } else if (remaining > 0) {
                 if (searchTerm.contains(" ")) {
-                    return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), searchTermExtra,
-                            animatedOnly, explicit, remaining - 1, false,
-                            additionalFilters,skippedResults);
+                    return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit,
+                            remaining - 1, false, additionalFilters,skippedResults);
                 } else if (searchTerm.contains("_")) {
-                    return getPicture(guildId, boardType, searchTerm.replace("_", " "), searchTermExtra,
-                            animatedOnly, explicit, remaining - 1, false,
-                            additionalFilters, skippedResults);
+                    return getPicture(guildId, boardType, searchTerm.replace("_", " "), animatedOnly, explicit,
+                            remaining - 1, false, additionalFilters, skippedResults);
                 }
             }
 
@@ -90,7 +86,7 @@ public class BooruDownloader {
             page = 0;
         }
 
-        return getPictureOnPage(guildId, boardType, finalSearchTerm, page, animatedOnly, explicit,
+        return getPictureOnPage(guildId, boardType, finalSearchTerm.toString(), page, animatedOnly, explicit,
                 additionalFilters, skippedResults);
     }
 

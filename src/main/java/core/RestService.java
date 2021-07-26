@@ -46,7 +46,6 @@ public class RestService {
                     booruRequest.getGuildId(),
                     booruRequest.getDomain(),
                     booruRequest.getSearchTerm(),
-                    booruRequest.getSearchTermExtra(),
                     booruRequest.getAnimatedOnly(),
                     booruRequest.getExplicit(),
                     booruRequest.getFilters(),
