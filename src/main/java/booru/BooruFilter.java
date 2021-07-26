@@ -18,6 +18,9 @@ public class BooruFilter {
                                               int maxSize
     ) {
         if (pornImages.size() == 0) return null;
+        else if (pornImages.size() == 1) {
+            return pornImages.get(0);
+        }
 
         try (Jedis jedis = jedisPool.getResource()) {
             /* delete global duplicate images */
