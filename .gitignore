@@ -131,3 +131,4 @@ gradle-app.setting
 
 .idea
 target
+src/main/jib

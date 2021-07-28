@@ -1,5 +1,8 @@
 package booru;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.time.Instant;
 import java.util.*;
 import core.WebCache;
@@ -10,11 +13,16 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.JedisPool;
 import util.InternetUtil;
 import util.NSFWUtil;
 
 public class BooruDownloader {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
 
     private final BooruFilter booruFilter;
     private final OkHttpClient client;
@@ -102,7 +110,6 @@ public class BooruDownloader {
         }
 
         ArrayList<BooruImageMeta> pornImages = new ArrayList<>();
-
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
             if (fileUrl != null) {
@@ -129,14 +136,46 @@ public class BooruDownloader {
     }
 
     private BooruImage createBooruImage(BoardType boardType, BoardImage image) {
-        String fileUrl = image.getURL();
+        String imageUrl = image.getURL();
         String pageUrl = boardType.getPageUrl(image.getId());
+        boolean video = InternetUtil.urlContainsVideo(imageUrl);
+        if (video) {
+            imageUrl = downloadVideo(boardType, image.getId(), imageUrl);
+        }
+
         return new BooruImage()
-                .setImageUrl(fileUrl)
+                .setImageUrl(imageUrl)
                 .setPageUrl(pageUrl)
                 .setScore(image.getScore())
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
-                .setVideo(!InternetUtil.urlContainsImage(fileUrl) && !fileUrl.endsWith("gif"));
+                .setVideo(video);
+    }
+
+    private String downloadVideo(BoardType boardType, int id, final String imageUrl) {
+        String[] fileParts = imageUrl.split("\\.");
+        String fileExt = fileParts[fileParts.length - 1];
+        String dirPath = System.getenv("VIDEO_CDN_PATH") + "/" + boardType.getDomain();
+        File dir = new File(dirPath);
+        File videoFile = new File(dirPath + "/" + id + "." + fileExt);
+
+        try {
+            if (dir.exists() && dir.isDirectory() && dir.canWrite()) {
+                if (!videoFile.exists()) {
+                    LOGGER.info("Downloading video: {}", id);
+                    FileUtils.copyURLToFile(
+                            new URL(imageUrl),
+                            videoFile,
+                            3_000,
+                            20_000
+                    );
+                    LOGGER.info("Video download complete: {}", id);
+                }
+                return "https://lawlietbot.xyz/cdn/" + boardType.getDomain() + "/" + id + "." + fileExt;
+            }
+        } catch (IOException e) {
+            LOGGER.error("Exception on video download", e);
+        }
+        return imageUrl;
     }
 
 }
