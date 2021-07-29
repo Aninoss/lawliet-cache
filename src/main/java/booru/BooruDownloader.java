@@ -28,6 +28,7 @@ public class BooruDownloader {
     private final OkHttpClient client;
     private final WebCache webCache;
     private final Random random = new Random();
+    private final ArrayList<Integer> activeVideoDownloads = new ArrayList<>();
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
         this.booruFilter = new BooruFilter(jedisPool);
@@ -55,7 +56,8 @@ public class BooruDownloader {
         }
 
         return getPicture(guildId, boardType, searchTerm, animatedOnly,
-                explicit, 2, false, filters, skippedResults);
+                explicit, 2, false, filters, skippedResults
+        );
     }
 
     private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
@@ -75,14 +77,17 @@ public class BooruDownloader {
         if (count == 0) {
             if (!softMode) {
                 return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit, remaining,
-                        true, additionalFilters, skippedResults);
+                        true, additionalFilters, skippedResults
+                );
             } else if (remaining > 0) {
                 if (searchTerm.contains(" ")) {
                     return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit,
-                            remaining - 1, false, additionalFilters,skippedResults);
+                            remaining - 1, false, additionalFilters, skippedResults
+                    );
                 } else if (searchTerm.contains("_")) {
                     return getPicture(guildId, boardType, searchTerm.replace("_", " "), animatedOnly, explicit,
-                            remaining - 1, false, additionalFilters, skippedResults);
+                            remaining - 1, false, additionalFilters, skippedResults
+                    );
                 }
             }
 
@@ -90,12 +95,13 @@ public class BooruDownloader {
         }
 
         int page = random.nextInt(count) / boardType.getMaxLimit();
-        if (finalSearchTerm.length() == 0)  {
+        if (finalSearchTerm.length() == 0) {
             page = 0;
         }
 
         return getPictureOnPage(guildId, boardType, finalSearchTerm.toString(), page, animatedOnly, explicit,
-                additionalFilters, skippedResults);
+                additionalFilters, skippedResults
+        );
     }
 
     private Optional<BooruImage> getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
@@ -158,22 +164,28 @@ public class BooruDownloader {
         File dir = new File(dirPath);
         File videoFile = new File(dirPath + "/" + id + "." + fileExt);
 
-        try {
-            if (dir.exists() && dir.isDirectory() && dir.canWrite()) {
-                if (!videoFile.exists()) {
+        if (dir.exists() && dir.isDirectory() && dir.canWrite()) {
+            if (!videoFile.exists()) {
+                if (activeVideoDownloads.size() < 5) {
+                    activeVideoDownloads.add(id);
                     LOGGER.info("Downloading video: {}", id);
-                    FileUtils.copyURLToFile(
-                            new URL(imageUrl),
-                            videoFile,
-                            3_000,
-                            20_000
-                    );
+                    try {
+                        FileUtils.copyURLToFile(
+                                new URL(imageUrl),
+                                videoFile,
+                                3_000,
+                                20_000
+                        );
+                    } catch (IOException e) {
+                        LOGGER.error("Exception on video download", e);
+                    }
                     LOGGER.info("Video download complete: {}", id);
+                    activeVideoDownloads.remove((Integer) id);
+                } else {
+                    return imageUrl;
                 }
-                return "https://lawlietbot.xyz/cdn/" + boardType.getDomain() + "/" + id + "." + fileExt;
             }
-        } catch (IOException e) {
-            LOGGER.error("Exception on video download", e);
+            return "https://lawlietbot.xyz/cdn/" + boardType.getDomain() + "/" + id + "." + fileExt;
         }
         return imageUrl;
     }
