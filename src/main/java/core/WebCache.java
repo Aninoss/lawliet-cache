@@ -1,15 +1,17 @@
 package core;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.SerializeUtil;
 
 public class WebCache {
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(WebCache.class);
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
 
     private final JedisPool jedisPool;
@@ -32,7 +34,11 @@ public class WebCache {
                 .build();
     }
 
-    public HttpResponse get(String url, int minutesCached) throws IOException {
+    public HttpResponse get(String url, int minutesCached) {
+        if (!Program.isProductionMode()) {
+            LOGGER.info("caching website: {}", url);
+        }
+
         String key = "webresponse:" + url;
         Object lock = lockManager.get(key);
 
@@ -51,6 +57,12 @@ public class WebCache {
                         httpResponse = new HttpResponse()
                                 .setCode(response.code())
                                 .setBody(response.body().string());
+                        jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
+                        jedis.expire(keyBytes, Duration.ofMinutes(minutesCached).toSeconds());
+                    } catch (Throwable e) {
+                        LOGGER.error("Web cache error", e);
+                        httpResponse = new HttpResponse()
+                                .setCode(500);
                         jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
                         jedis.expire(keyBytes, Duration.ofMinutes(minutesCached).toSeconds());
                     }

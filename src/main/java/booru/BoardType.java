@@ -7,9 +7,7 @@ import core.WebCache;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
-import net.kodehawa.lib.imageboards.entities.impl.FurryImage;
-import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
-import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
+import net.kodehawa.lib.imageboards.entities.impl.*;
 
 public enum BoardType {
 
@@ -19,7 +17,8 @@ public enum BoardType {
             999,
             DefaultBoards.R34,
             Rule34Image.class,
-            new Rule34Counter()
+            new Rule34Counter(),
+            -1
     ),
 
     SAFEBOORU(
@@ -28,7 +27,8 @@ public enum BoardType {
             999,
             DefaultBoards.SAFEBOORU,
             SafebooruImage.class,
-            new SafebooruCounter()
+            new SafebooruCounter(),
+            -1
     ),
 
     REALBOORU(
@@ -37,7 +37,8 @@ public enum BoardType {
             999,
             new RealbooruBoard(),
             RealbooruImage.class,
-            new RealbooruCounter()
+            new RealbooruCounter(),
+            -1
     ),
 
     E621(
@@ -46,7 +47,38 @@ public enum BoardType {
             320,
             DefaultBoards.E621,
             FurryImage.class,
-            new E621Counter()
+            new E621Counter(),
+            -1
+    ),
+
+    KONACHAN(
+            "konachan.com",
+            "https://konachan.com/post/show/",
+            999,
+            DefaultBoards.KONACHAN,
+            KonachanImage.class,
+            new KonachanCounter(),
+            6
+    ),
+
+    DANBOORU(
+            "danbooru.donmai.us",
+            "https://danbooru.donmai.us/posts/",
+            200,
+            DefaultBoards.DANBOORU,
+            DanbooruImage.class,
+            new DanbooruCounter(),
+            2
+    ),
+
+    E926(
+            "e926.net",
+            "https://e926.net/posts/",
+            320,
+            DefaultBoards.E926,
+            FurryImage.class,
+            new E926Counter(),
+            -1
     );
 
     private final String domain;
@@ -55,14 +87,16 @@ public enum BoardType {
     private final Board board;
     private final Class<? extends BoardImage> boardImageClass;
     private final Counter counter;
+    private final int maxTags;
 
-    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass, Counter counter) {
+    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass, Counter counter, int maxTags) {
         this.domain = domain;
         this.pagePrefix = pagePrefix;
         this.maxLimit = maxLimit;
         this.board = board;
         this.boardImageClass = boardImageClass;
         this.counter = counter;
+        this.maxTags = maxTags;
     }
 
     public String getDomain() {
@@ -87,6 +121,10 @@ public enum BoardType {
 
     public int count(WebCache webCache, String tags) {
         return counter.count(webCache, tags);
+    }
+
+    public int getMaxTags() {
+        return maxTags;
     }
 
     public static BoardType fromDomain(String domain) {

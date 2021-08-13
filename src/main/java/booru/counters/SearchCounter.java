@@ -14,7 +14,7 @@ public abstract class SearchCounter implements Counter {
         try {
             data = webCache.get(url, 15).getBody();
         } catch (Throwable e) {
-            LOGGER.error("Error for domain {}", url.split("/")[2]);
+            LOGGER.error("Error for domain {}", url.split("/")[2], e);
             return 0;
         }
 

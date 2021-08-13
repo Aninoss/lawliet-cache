@@ -41,7 +41,7 @@ public class RandomPicker {
                 int index = random.nextInt(options.size());
                 int n = options.get(index);
                 jedis.lpush(key, String.valueOf(n));
-                jedis.expire(key, Duration.ofMinutes(30).toSeconds());
+                jedis.expire(key, Duration.ofDays(7).toSeconds());
 
                 return n;
             }

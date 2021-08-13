@@ -35,7 +35,7 @@ public class BooruImageCacheSearchKey {
 
     public void add(String imageURL) {
         jedis.lpush(getKey(), imageURL);
-        jedis.expire(getKey(), Duration.ofMinutes(30).toSeconds());
+        jedis.expire(getKey(), Duration.ofDays(7).toSeconds());
     }
 
     private String getKey() {
