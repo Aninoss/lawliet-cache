@@ -156,7 +156,7 @@ public class BooruDownloader {
             }
         }
 
-        return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, boardImages.size() - 1))
+        return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1))
                 .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage()));
     }
 
