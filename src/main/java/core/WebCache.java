@@ -54,17 +54,18 @@ public class WebCache {
                             .build();
 
                     try (Response response = client.newCall(request).execute()) {
+                        int code = response.code();
                         httpResponse = new HttpResponse()
-                                .setCode(response.code())
+                                .setCode(code)
                                 .setBody(response.body().string());
                         jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
-                        jedis.expire(keyBytes, Duration.ofMinutes(minutesCached).toSeconds());
+                        jedis.expire(keyBytes, Duration.ofMinutes(code / 100 != 5 ? minutesCached : 1).toSeconds());
                     } catch (Throwable e) {
                         LOGGER.error("Web cache error", e);
                         httpResponse = new HttpResponse()
                                 .setCode(500);
                         jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
-                        jedis.expire(keyBytes, Duration.ofMinutes(minutesCached).toSeconds());
+                        jedis.expire(keyBytes, Duration.ofMinutes(1).toSeconds());
                     }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);

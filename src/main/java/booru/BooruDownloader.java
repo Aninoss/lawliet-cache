@@ -129,7 +129,13 @@ public class BooruDownloader {
                                                   List<String> skippedResults
     ) {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
-        List<? extends BoardImage> boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
+        List<? extends BoardImage> boardImages;
+        try {
+            boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
+        } catch (Throwable e) {
+            LOGGER.error("Error in imageboard type {}", boardType.getDomain(), e);
+            return Optional.empty();
+        }
 
         if (boardImages.isEmpty()) {
             return Optional.empty();

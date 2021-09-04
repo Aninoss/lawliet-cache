@@ -10,7 +10,7 @@ public enum ContentType {
 
         return switch (ext) {
             case "jpeg", "jpg", "png", "bmp" -> IMAGE;
-            case "mp4", "avi", "webm" -> ANIMATED;
+            case "gif", "mp4", "avi", "webm" -> ANIMATED;
             default -> NONE;
         };
     }
