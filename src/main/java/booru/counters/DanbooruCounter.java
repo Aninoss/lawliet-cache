@@ -4,6 +4,7 @@ import core.WebCache;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.InternetUtil;
 
 public class DanbooruCounter implements Counter {
 
@@ -11,7 +12,7 @@ public class DanbooruCounter implements Counter {
 
     @Override
     public int count(WebCache webCache, String tags) {
-        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + tags;
+        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags);
         String data;
         try {
             data = webCache.get(url, 15).getBody();
