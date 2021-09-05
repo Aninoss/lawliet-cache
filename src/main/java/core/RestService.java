@@ -28,6 +28,7 @@ public class RestService {
     private final WebCache webCache = new WebCache(jedisPool, lockManager);
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
     private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
+    private final CheckOwnConnection checkOwnConnection = new CheckOwnConnection(webCache.getClient());
 
     @GET
     @Path("/ping")
