@@ -12,7 +12,7 @@ public class DanbooruCounter implements Counter {
 
     @Override
     public int count(WebCache webCache, String tags) {
-        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags);
+        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags + " status:active");
         String data;
         try {
             data = webCache.get(url, 15).getBody();

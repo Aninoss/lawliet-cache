@@ -80,6 +80,9 @@ public class BooruDownloader {
         if (boardType.getMaxTags() >= 0) {
             finalSearchTermString = reduceTags(finalSearchTermString, boardType.getMaxTags());
         }
+        if (boardType == BoardType.DANBOORU) {
+            finalSearchTermString += " -filetype:zip";
+        }
 
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTermString));
         if (count == 0) {
