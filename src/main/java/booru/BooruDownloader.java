@@ -192,9 +192,7 @@ public class BooruDownloader {
                     try {
                         FileUtils.copyURLToFile(
                                 new URL(imageUrl),
-                                videoFile,
-                                3_000,
-                                20_000
+                                videoFile
                         );
                     } catch (IOException e) {
                         LOGGER.error("Exception on video download", e);
