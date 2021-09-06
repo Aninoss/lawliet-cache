@@ -36,7 +36,7 @@ public class BooruDownloader {
                     Request request = chain.request();
                     request = request.newBuilder()
                             .url(String.format("http://localhost:%s/api/cached_proxy/15", System.getenv("PORT")))
-                            .method("POST", RequestBody.create(MediaType.get("text/plain"), request.url().toString()))
+                            .method("POST", RequestBody.create(request.url().toString(), MediaType.get("text/plain")))
                             .addHeader("Authorization", System.getenv("AUTH"))
                             .build();
                     return chain.proceed(request);
