@@ -68,7 +68,7 @@ public enum BoardType {
             DefaultBoards.DANBOORU,
             DanbooruImage.class,
             new DanbooruCounter(),
-            2
+            12
     ),
 
     E926(

@@ -35,6 +35,10 @@ public class WebCache {
     }
 
     public HttpResponse get(String url, int minutesCached) {
+        if (url.startsWith("https://danbooru.donmai.us/")) {
+            url += String.format("&api_key=%s&login=%s", System.getenv("DANBOORU_API_TOKEN"), System.getenv("DANBOORU_LOGIN"));
+        }
+
         if (!Program.isProductionMode()) {
             LOGGER.info("caching website: {}", url);
         }
