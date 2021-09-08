@@ -1,8 +1,5 @@
 package booru;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 import java.time.Instant;
 import java.util.*;
 import core.WebCache;
@@ -13,7 +10,6 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.JedisPool;
@@ -153,25 +149,28 @@ public class BooruDownloader {
                 boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
                 boolean notPending = !boardImage.isPending();
 
-                if (contentType != ContentType.NONE &&
-                        (!animatedOnly || contentType == ContentType.ANIMATED) &&
+                if (contentType != null &&
+                        (!animatedOnly || contentType.isAnimated()) &&
                         score >= 0 &&
                         NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
                         isExplicit == explicit &&
                         notPending
                 ) {
-                    pornImages.add(new BooruImageMeta(fileUrl, score, boardImage));
+                    pornImages.add(new BooruImageMeta(fileUrl, score, boardImage, contentType));
                 }
             }
         }
 
         return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1))
-                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage()));
+                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage(), pornImageMeta.getContentType()));
     }
 
-    private BooruImage createBooruImage(BoardType boardType, BoardImage image) {
+    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType) {
         String imageUrl = image.getURL();
         String pageUrl = boardType.getPageUrl(image.getId());
+        if (boardType == BoardType.RULE34 && contentType.isVideo()) {
+            imageUrl = translateVideoUrlToOwnCDN(imageUrl);
+        }
 
         return new BooruImage()
                 .setImageUrl(imageUrl)
@@ -180,35 +179,9 @@ public class BooruDownloader {
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()));
     }
 
-    private String downloadVideo(BoardType boardType, int id, final String imageUrl) {
-        String[] fileParts = imageUrl.split("\\.");
-        String fileExt = fileParts[fileParts.length - 1];
-        String dirPath = System.getenv("VIDEO_CDN_PATH") + "/" + boardType.getDomain();
-        File dir = new File(dirPath);
-        File videoFile = new File(dirPath + "/" + id + "." + fileExt);
-
-        if (dir.exists() && dir.isDirectory() && dir.canWrite()) {
-            if (!videoFile.exists()) {
-                if (activeVideoDownloads.size() < 4) {
-                    activeVideoDownloads.add(id);
-                    LOGGER.info("Downloading video: {}", id);
-                    try {
-                        FileUtils.copyURLToFile(
-                                new URL(imageUrl),
-                                videoFile
-                        );
-                    } catch (IOException e) {
-                        LOGGER.error("Exception on video download", e);
-                    }
-                    LOGGER.info("Video download complete: {}", id);
-                    activeVideoDownloads.remove((Integer) id);
-                } else {
-                    return imageUrl;
-                }
-            }
-            return "https://lawlietbot.xyz/cdn/" + boardType.getDomain() + "/" + id + "." + fileExt;
-        }
-        return imageUrl;
+    private String translateVideoUrlToOwnCDN(String videoUrl) {
+        String[] parts = videoUrl.split("/");
+        return "https://media-cdn.lawlietbot.xyz/media/rule34/" + parts[parts.length - 2] + "/" + parts[parts.length - 1];
     }
 
 }

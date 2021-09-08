@@ -1,17 +1,32 @@
 package booru;
 
-public enum ContentType {
+public class ContentType {
 
-    NONE, IMAGE, ANIMATED;
+    private final boolean animated;
+    private final boolean video;
+
+    private ContentType(boolean animated, boolean video) {
+        this.animated = animated;
+        this.video = video;
+    }
+
+    public boolean isAnimated() {
+        return animated;
+    }
+
+    public boolean isVideo() {
+        return video;
+    }
 
     public static ContentType parseFromUrl(String url) {
         String[] urlParts = url.toLowerCase().split("\\.");
         String ext = urlParts[urlParts.length - 1];
 
         return switch (ext) {
-            case "jpeg", "jpg", "png", "bmp" -> IMAGE;
-            case "gif", "mp4", "avi", "webm" -> ANIMATED;
-            default -> NONE;
+            case "jpeg", "jpg", "png", "bmp" -> new ContentType(false, false);
+            case "gif" -> new ContentType(true, false);
+            case "mp4", "avi", "webm" -> new ContentType(true, true);
+            default -> null;
         };
     }
 
