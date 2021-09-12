@@ -1,7 +1,9 @@
 package booru;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import core.Program;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
@@ -43,21 +45,22 @@ public class BooruDownloader {
     }
 
     public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, boolean animatedOnly,
-                                           boolean explicit, List<String> filters, List<String> skippedResults) {
+                                           boolean explicit, List<String> filters, List<String> skippedResults,
+                                           boolean test) {
         searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new NoSuchElementException("No such image board");
         }
 
-        return getPicture(guildId, boardType, searchTerm, animatedOnly,
-                explicit, 2, false, filters, skippedResults
+        return getPicture(guildId, boardType, searchTerm, animatedOnly, explicit, 2, false, filters,
+                skippedResults, test
         );
     }
 
     private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
                                             boolean explicit, int remaining, boolean softMode,
-                                            List<String> additionalFilters, List<String> skippedResults
+                                            List<String> filters, List<String> skippedResults, boolean test
     ) {
         while (searchTerm.contains("  ")) searchTerm = searchTerm.replace("  ", " ");
         searchTerm = searchTerm.replace(", ", ",")
@@ -69,7 +72,7 @@ public class BooruDownloader {
                 (softMode ? "~" : ""));
 
         if (boardType.getMaxTags() < 0) {
-            additionalFilters.forEach(filter -> finalSearchTerm.append(" -").append(filter));
+            filters.forEach(filter -> finalSearchTerm.append(" -").append(filter));
         }
 
         String finalSearchTermString = finalSearchTerm.toString();
@@ -81,33 +84,33 @@ public class BooruDownloader {
         }
 
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTermString));
-        if (count == 0) {
+        if (count == 0 && !test) {
             if (!softMode) {
                 return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit, remaining,
-                        true, additionalFilters, skippedResults
+                        true, filters, skippedResults, test
                 );
             } else if (remaining > 0) {
                 if (searchTerm.contains(" ")) {
                     return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit,
-                            remaining - 1, false, additionalFilters, skippedResults
+                            remaining - 1, false, filters, skippedResults, test
                     );
                 } else if (searchTerm.contains("_")) {
                     return getPicture(guildId, boardType, searchTerm.replace("_", " "), animatedOnly, explicit,
-                            remaining - 1, false, additionalFilters, skippedResults
+                            remaining - 1, false, filters, skippedResults, test
                     );
                 }
             }
 
             return Optional.empty();
+        } else if (test) {
+            return Optional.of(new BooruImage());
         }
 
-        int page = random.nextInt(count) / boardType.getMaxLimit();
-        if (finalSearchTermString.length() == 0) {
-            page = 0;
-        }
+        int shift = count >= 19_000 ? 2000 : 0;
+        int page = (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
         return getPictureOnPage(guildId, boardType, finalSearchTermString, page, animatedOnly, explicit,
-                additionalFilters, skippedResults
+                filters, skippedResults
         );
     }
 
@@ -141,6 +144,8 @@ public class BooruDownloader {
         }
 
         ArrayList<BooruImageMeta> pornImages = new ArrayList<>();
+        long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
+
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
             if (fileUrl != null) {
@@ -148,13 +153,15 @@ public class BooruDownloader {
                 ContentType contentType = ContentType.parseFromUrl(fileUrl);
                 boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
                 boolean notPending = !boardImage.isPending();
+                long created = boardImage.getCreationMillis();
 
                 if (contentType != null &&
                         (!animatedOnly || contentType.isAnimated()) &&
                         score >= 0 &&
                         NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
                         isExplicit == explicit &&
-                        notPending
+                        notPending &&
+                        created <= maxPostDate
                 ) {
                     pornImages.add(new BooruImageMeta(fileUrl, score, boardImage, contentType));
                 }
@@ -168,7 +175,7 @@ public class BooruDownloader {
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType) {
         String imageUrl = image.getURL();
         String pageUrl = boardType.getPageUrl(image.getId());
-        if (boardType == BoardType.RULE34 && contentType.isVideo()) {
+        if (boardType == BoardType.RULE34 && contentType.isVideo() && (!Program.isProductionMode() || random.nextInt(10) == 0)) {
             imageUrl = translateVideoUrlToOwnCDN(imageUrl);
         }
 

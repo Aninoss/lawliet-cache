@@ -107,7 +107,7 @@ public enum BoardType {
         return maxLimit;
     }
 
-    public String getPageUrl(int id) {
+    public String getPageUrl(long id) {
         return pagePrefix + id;
     }
 

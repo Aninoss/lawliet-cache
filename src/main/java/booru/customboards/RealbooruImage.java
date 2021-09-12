@@ -10,7 +10,7 @@ import net.kodehawa.lib.imageboards.entities.Rating;
 
 public class RealbooruImage implements BoardImage {
 
-    private int id;
+    private long id;
     private String directory;
     private String image;
     private int height;
@@ -33,7 +33,7 @@ public class RealbooruImage implements BoardImage {
     }
 
     @Override
-    public int getId() {
+    public long getId() {
         return id;
     }
 

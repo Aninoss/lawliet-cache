@@ -50,7 +50,8 @@ public class RestService {
                     booruRequest.getAnimatedOnly(),
                     booruRequest.getExplicit(),
                     booruRequest.getFilters(),
-                    booruRequest.getSkippedResults()
+                    booruRequest.getSkippedResults(),
+                    booruRequest.getTest()
             ).orElse(null);
         } catch (Throwable e) {
             LOGGER.error("Error in /booru", e);
