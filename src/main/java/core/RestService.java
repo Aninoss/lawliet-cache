@@ -1,6 +1,7 @@
 package core;
 
 import java.io.IOException;
+import java.time.Duration;
 import booru.BooruDownloader;
 import booru.BooruImage;
 import booru.BooruRequest;
@@ -42,7 +43,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public BooruImage booru(BooruRequest booruRequest) {
-        try {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             return booruDownloader.getPicture(
                     booruRequest.getGuildId(),
                     booruRequest.getDomain(),
@@ -64,7 +65,7 @@ public class RestService {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public HttpResponse webcache(String url) throws IOException {
-        try {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             return webCache.get(url, 5);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
@@ -76,7 +77,7 @@ public class RestService {
     @Path("/cached_proxy/{minutes}")
     @Consumes(MediaType.TEXT_PLAIN)
     public Response cachedProxy(String url, @PathParam("minutes") int minutes) throws IOException {
-        try {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             HttpResponse httpResponse = webCache.get(url, minutes);
             if (httpResponse.getCode() / 100 == 2) {
                 return Response.ok(httpResponse.getBody()).build();
@@ -94,7 +95,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public Integer randomPicker(RandomPickerRequest randomPickerRequest) {
-        try {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             return randomPicker.pick(
                     randomPickerRequest.getTag(),
                     randomPickerRequest.getGuildId(),
