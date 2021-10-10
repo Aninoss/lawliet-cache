@@ -14,6 +14,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.NSFWUtil;
 
@@ -25,9 +26,10 @@ public class BooruDownloader {
     private final OkHttpClient client;
     private final WebCache webCache;
     private final Random random = new Random();
-    private final ArrayList<Integer> activeVideoDownloads = new ArrayList<>();
+    private final JedisPool jedisPool;
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
+        this.jedisPool = jedisPool;
         this.booruFilter = new BooruFilter(jedisPool);
         this.client = webCache.getClient().newBuilder()
                 .addInterceptor(chain -> {
@@ -145,6 +147,10 @@ public class BooruDownloader {
 
         ArrayList<BooruImageMeta> pornImages = new ArrayList<>();
         long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
+        Set<String> blockSet;
+        try (Jedis jedis = jedisPool.getResource()) {
+            blockSet = jedis.hgetAll("reports").keySet();
+        }
 
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
@@ -154,6 +160,7 @@ public class BooruDownloader {
                 boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
                 boolean notPending = !boardImage.isPending();
                 long created = boardImage.getCreationMillis();
+                boolean blocked = blockSet.contains(fileUrl);
 
                 if (contentType != null &&
                         (!animatedOnly || contentType.isAnimated()) &&
@@ -161,7 +168,8 @@ public class BooruDownloader {
                         NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
                         isExplicit == explicit &&
                         notPending &&
-                        created <= maxPostDate
+                        created <= maxPostDate &&
+                        !blocked
                 ) {
                     pornImages.add(new BooruImageMeta(fileUrl, score, boardImage, contentType));
                 }
