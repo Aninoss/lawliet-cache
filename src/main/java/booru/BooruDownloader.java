@@ -183,7 +183,7 @@ public class BooruDownloader {
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType) {
         String imageUrl = image.getURL();
         String pageUrl = boardType.getPageUrl(image.getId());
-        if (boardType == BoardType.RULE34 && contentType.isVideo() && (!Program.isProductionMode() || random.nextInt(10) == 0)) {
+        if (boardType == BoardType.RULE34 && contentType.isVideo() && (!Program.isProductionMode() || random.nextInt(100) < 10)) {
             imageUrl = translateVideoUrlToOwnCDN(imageUrl);
         }
 

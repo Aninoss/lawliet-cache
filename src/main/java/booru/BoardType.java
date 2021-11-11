@@ -3,6 +3,7 @@ package booru;
 import booru.counters.*;
 import booru.customboards.RealbooruBoard;
 import booru.customboards.RealbooruImage;
+import booru.customboards.Rule34Board;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
@@ -13,9 +14,9 @@ public enum BoardType {
 
     RULE34(
             "rule34.xxx",
-            "https://rule34.xxx/index.php?page=post&s=view&id=",
+            "https://api.rule34.xxx/index.php?page=post&s=view&id=",
             999,
-            DefaultBoards.R34,
+            new Rule34Board(),
             Rule34Image.class,
             new Rule34Counter(),
             -1
