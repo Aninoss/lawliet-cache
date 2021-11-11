@@ -14,7 +14,7 @@ public enum BoardType {
 
     RULE34(
             "rule34.xxx",
-            "https://api.rule34.xxx/index.php?page=post&s=view&id=",
+            "https://rule34.xxx/index.php?page=post&s=view&id=",
             999,
             new Rule34Board(),
             Rule34Image.class,
