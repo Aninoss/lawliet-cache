@@ -14,7 +14,7 @@ public class CheckOwnConnection {
     private final static Logger LOGGER = LoggerFactory.getLogger(CheckOwnConnection.class);
 
     public CheckOwnConnection(OkHttpClient client) {
-        String url = String.format("http://%s:%d/api/ping", System.getenv("HOST"), Integer.parseInt(System.getenv("PORT")));
+        String url = String.format("http://localhost:%d/api/ping", Integer.parseInt(System.getenv("PORT")));
         Request request = new Request.Builder()
                 .url(url)
                 .addHeader("Authorization", System.getenv("AUTH"))

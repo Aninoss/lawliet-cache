@@ -3,7 +3,6 @@ package booru;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import core.Program;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
@@ -182,6 +181,7 @@ public class BooruDownloader {
 
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType) {
         String imageUrl = image.getURL();
+        String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
         int customWebserverChance = Integer.parseInt(System.getenv("CUSTOM_WEBSERVER_CHANCE"));
         if (boardType == BoardType.RULE34 && contentType.isVideo() && random.nextInt(100) < customWebserverChance) {
@@ -190,6 +190,7 @@ public class BooruDownloader {
 
         return new BooruImage()
                 .setImageUrl(imageUrl)
+                .setOriginalImageUrl(originalImageUrl)
                 .setPageUrl(pageUrl)
                 .setScore(image.getScore())
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()));
