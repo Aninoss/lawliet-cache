@@ -21,6 +21,7 @@ public class AsyncTimer implements AutoCloseable {
         thread = Thread.currentThread();
         executorService.schedule(() -> {
             if (pending) {
+                LOGGER.error("Async timer interrupted: {}", thread.getName());
                 interrupt();
             }
         }, duration.toMillis(), TimeUnit.MILLISECONDS);
@@ -30,7 +31,6 @@ public class AsyncTimer implements AutoCloseable {
         AtomicReference<Runnable> atomicRunnable = new AtomicReference<>();
         atomicRunnable.set(() -> {
             if (pending) {
-                LOGGER.error("Async timer interrupted: {}", thread.getName());
                 thread.interrupt();
                 executorService.schedule(atomicRunnable.get(), 100, TimeUnit.MILLISECONDS);
             }

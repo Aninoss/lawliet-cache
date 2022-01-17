@@ -1,6 +1,5 @@
 package core;
 
-import java.io.IOException;
 import java.time.Duration;
 import booru.BooruDownloader;
 import booru.BooruImage;
@@ -64,7 +63,7 @@ public class RestService {
     @Path("/webcache")
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
-    public HttpResponse webcache(String url) throws IOException {
+    public HttpResponse webcache(String url) {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             return webCache.get(url, 5);
         } catch (Throwable e) {
@@ -76,7 +75,7 @@ public class RestService {
     @POST
     @Path("/cached_proxy/{minutes}")
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response cachedProxy(String url, @PathParam("minutes") int minutes) throws IOException {
+    public Response cachedProxy(String url, @PathParam("minutes") int minutes) {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
             HttpResponse httpResponse = webCache.get(url, minutes);
             if (httpResponse.getCode() / 100 == 2) {

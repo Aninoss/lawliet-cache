@@ -1,6 +1,7 @@
 package core;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import org.slf4j.Logger;
@@ -52,9 +53,12 @@ public class WebCache {
                 byte[] keyBytes = key.getBytes();
                 byte[] data = jedis.get(keyBytes);
                 if (data == null) {
-                    httpResponse = getWithoutCache(url);
+                    httpResponse = getWithoutCache(jedis, url);
                     jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
                     jedis.expire(keyBytes, Duration.ofMinutes(httpResponse.getCode() / 100 != 5 ? minutesCached : 1).toSeconds());
+                    if (!Program.isProductionMode()) {
+                        LOGGER.info("new cache entry for: {}", url);
+                    }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);
                 }
@@ -64,23 +68,36 @@ public class WebCache {
         return httpResponse;
     }
 
-    public HttpResponse getWithoutCache(String url) {
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("User-Agent", USER_AGENT)
-                .build();
+    public HttpResponse getWithoutCache(Jedis jedis, String url) {
+        String domain = url.split("/")[2];
+        String domainBlockKey = "domain_block:" + domain;
+        String domainBlockValue = jedis.get(domainBlockKey);
+        int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
+        if (domainBlockCounter < 3) {
+            try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(5))) {
+                Request request = new Request.Builder()
+                        .url(url)
+                        .addHeader("User-Agent", USER_AGENT)
+                        .build();
 
-        HttpResponse httpResponse;
-        try (Response response = client.newCall(request).execute()) {
-            httpResponse = new HttpResponse()
-                    .setCode(response.code())
-                    .setBody(response.body().string());
-        } catch (Throwable e) {
-            LOGGER.error("Web cache error", e);
-            httpResponse = new HttpResponse()
+                try (Response response = client.newCall(request).execute()) {
+                    jedis.set(domainBlockKey, "0");
+                    return new HttpResponse()
+                            .setCode(response.code())
+                            .setBody(response.body().string());
+                }
+            } catch (Throwable e) {
+                LOGGER.error("Web cache error ({})", domain, e);
+                jedis.incr(domainBlockKey);
+                return new HttpResponse()
+                        .setCode(500);
+            } finally {
+                jedis.expire(domainBlockKey, Duration.ofMinutes(1).toSeconds());
+            }
+        } else {
+            return new HttpResponse()
                     .setCode(500);
         }
-        return httpResponse;
     }
 
     public OkHttpClient getClient() {
