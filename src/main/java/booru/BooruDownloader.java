@@ -181,14 +181,14 @@ public class BooruDownloader {
         }
 
         return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1))
-                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage(), pornImageMeta.getContentType()));
+                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage(), pornImageMeta.getContentType(), guildId));
     }
 
-    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType) {
+    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId) {
         String imageUrl = image.getURL();
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
-        if (boardType == BoardType.RULE34 && contentType.isVideo() && usesSharding()) {
+        if (boardType == BoardType.RULE34 && contentType.isVideo() && usesSharding(guildId)) {
             String[] parts = imageUrl.substring(1).split("/");
             int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
             imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
@@ -202,8 +202,10 @@ public class BooruDownloader {
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()));
     }
 
-    private boolean usesSharding() {
-        if (mediaServerCooldown <= 0) {
+    private boolean usesSharding(long guildId) {
+        if (guildId <= 999) {
+            return false;
+        } else if (mediaServerCooldown <= 0) {
             return true;
         }
 

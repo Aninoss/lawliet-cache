@@ -73,7 +73,7 @@ public class WebCache {
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < 3) {
+        if (domainBlockCounter < 5) {
             try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(5))) {
                 Request request = new Request.Builder()
                         .url(url)
@@ -87,8 +87,8 @@ public class WebCache {
                             .setBody(response.body().string());
                 }
             } catch (Throwable e) {
-                LOGGER.error("Web cache error ({})", domain, e);
-                jedis.incr(domainBlockKey);
+                long errors = jedis.incr(domainBlockKey);
+                LOGGER.error("Web cache error ({}; {} errors)", domain, errors, e);
                 return new HttpResponse()
                         .setCode(500);
             } finally {
