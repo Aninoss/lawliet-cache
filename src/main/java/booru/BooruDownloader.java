@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.params.SetParams;
 import util.NSFWUtil;
 
 public class BooruDownloader {
@@ -26,6 +27,8 @@ public class BooruDownloader {
     private final WebCache webCache;
     private final Random random = new Random();
     private final JedisPool jedisPool;
+    private final int mediaServerCooldown;
+    private final int mediaServerMaxShards;
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
         this.jedisPool = jedisPool;
@@ -42,6 +45,8 @@ public class BooruDownloader {
                 })
                 .build();
         this.webCache = webCache;
+        this.mediaServerCooldown = Integer.parseInt(System.getenv("MS_COOLDOWN_MILLIS"));
+        this.mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
@@ -183,9 +188,10 @@ public class BooruDownloader {
         String imageUrl = image.getURL();
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
-        int customWebserverChance = Integer.parseInt(System.getenv("CUSTOM_WEBSERVER_CHANCE"));
-        if (boardType == BoardType.RULE34 && contentType.isVideo() && random.nextInt(100) < customWebserverChance) {
-            imageUrl = translateVideoUrlToOwnCDN(imageUrl);
+        if (boardType == BoardType.RULE34 && contentType.isVideo() && usesSharding()) {
+            String[] parts = imageUrl.substring(1).split("/");
+            int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
+            imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
         }
 
         return new BooruImage()
@@ -196,9 +202,29 @@ public class BooruDownloader {
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()));
     }
 
-    private String translateVideoUrlToOwnCDN(String videoUrl) {
+    private boolean usesSharding() {
+        if (mediaServerCooldown <= 0) {
+            return true;
+        }
+
+        try (Jedis jedis = jedisPool.getResource()) {
+            SetParams setParams = new SetParams();
+            setParams.nx();
+            setParams.px(mediaServerCooldown);
+            if ("OK".equals(jedis.set("ms_cooldown", Instant.now().toString(), setParams))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int getShard(String dir, String id) {
+        return Math.abs(Objects.hash(dir, id)) % mediaServerMaxShards;
+    }
+
+    private String translateVideoUrlToOwnCDN(String domain, String videoUrl) {
         String[] parts = videoUrl.split("/");
-        return "https://media-cdn.lawlietbot.xyz/media/rule34/" + parts[parts.length - 2] + "/" + parts[parts.length - 1];
+        return "https://" + domain + "/media/rule34/" + parts[parts.length - 2] + "/" + parts[parts.length - 1];
     }
 
 }
