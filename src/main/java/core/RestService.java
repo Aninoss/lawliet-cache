@@ -1,6 +1,7 @@
 package core;
 
 import java.time.Duration;
+import java.util.List;
 import booru.BooruDownloader;
 import booru.BooruImage;
 import booru.BooruRequest;
@@ -10,6 +11,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reddit.RedditDownloader;
+import reddit.RedditPost;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
@@ -27,6 +30,7 @@ public class RestService {
     private final LockManager lockManager = new LockManager();
     private final WebCache webCache = new WebCache(jedisPool, lockManager);
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
+    private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);
     private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
     private final CheckOwnConnection checkOwnConnection = new CheckOwnConnection(webCache.getClient());
 
@@ -52,9 +56,35 @@ public class RestService {
                     booruRequest.getFilters(),
                     booruRequest.getSkippedResults(),
                     booruRequest.getTest()
-            ).orElse(null);
+            );
         } catch (Throwable e) {
             LOGGER.error("Error in /booru", e);
+            throw e;
+        }
+    }
+
+    @GET
+    @Path("/reddit/single/{guild_id}/{nsfw_allowed}/{subreddit}/{order_by}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public RedditPost redditSingle(@PathParam("guild_id") long guildId, @PathParam("nsfw_allowed") boolean nsfwAllowed,
+                                   @PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy
+    ) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            return redditDownloader.retrievePost(guildId, subreddit, orderBy, nsfwAllowed);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /reddit (single)", e);
+            throw e;
+        }
+    }
+
+    @GET
+    @Path("/reddit/bulk/{subreddit}/{order_by}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<RedditPost> redditBulk(@PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            return redditDownloader.retrievePostsBulk(subreddit, orderBy);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /reddit (bulk)", e);
             throw e;
         }
     }

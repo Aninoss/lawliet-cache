@@ -11,4 +11,8 @@ public class InternetUtil {
         return UrlEscapers.urlFragmentEscaper().escape(url);
     }
 
+    public static boolean urlContainsImage(String url) {
+        return url.endsWith("jpeg") || url.endsWith("jpg") || url.endsWith("png") || url.endsWith("bmp") || url.endsWith("gif");
+    }
+
 }

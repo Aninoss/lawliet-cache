@@ -50,7 +50,7 @@ public class BooruDownloader {
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
-    public Optional<BooruImage> getPicture(long guildId, String domain, String searchTerm, boolean animatedOnly,
+    public BooruImage getPicture(long guildId, String domain, String searchTerm, boolean animatedOnly,
                                            boolean explicit, List<String> filters, List<String> skippedResults,
                                            boolean test) {
         searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
@@ -64,7 +64,7 @@ public class BooruDownloader {
         );
     }
 
-    private Optional<BooruImage> getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
+    private BooruImage getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
                                             boolean explicit, int remaining, boolean softMode,
                                             List<String> filters, List<String> skippedResults, boolean test
     ) {
@@ -107,9 +107,9 @@ public class BooruDownloader {
                 }
             }
 
-            return Optional.empty();
+            return null;
         } else if (test) {
-            return Optional.of(new BooruImage());
+            return new BooruImage();
         }
 
         int shift = count >= 19_000 ? 2000 : 0;
@@ -132,7 +132,7 @@ public class BooruDownloader {
         return sb.toString();
     }
 
-    private Optional<BooruImage> getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
+    private BooruImage getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
                                                   boolean animatedOnly, boolean explicit, List<String> filters,
                                                   List<String> skippedResults
     ) {
@@ -142,11 +142,11 @@ public class BooruDownloader {
             boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
         } catch (Throwable e) {
             LOGGER.error("Error in imageboard type {}", boardType.getDomain(), e);
-            return Optional.empty();
+            return null;
         }
 
         if (boardImages.isEmpty()) {
-            return Optional.empty();
+            return null;
         }
 
         ArrayList<BooruImageMeta> pornImages = new ArrayList<>();
@@ -180,8 +180,8 @@ public class BooruDownloader {
             }
         }
 
-        return Optional.ofNullable(booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1))
-                .map(pornImageMeta -> createBooruImage(boardType, pornImageMeta.getBoardImage(), pornImageMeta.getContentType(), guildId));
+        BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
+        return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId);
     }
 
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId) {
