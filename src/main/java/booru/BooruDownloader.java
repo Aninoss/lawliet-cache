@@ -50,58 +50,60 @@ public class BooruDownloader {
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
-    public BooruImage getPicture(long guildId, String domain, String searchTerm, boolean animatedOnly,
+    public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
                                            boolean explicit, List<String> filters, List<String> skippedResults,
                                            boolean test) {
-        searchTerm = NSFWUtil.filterPornSearchKey(searchTerm, filters);
+        searchKeys = NSFWUtil.filterPornSearchKey(searchKeys, filters);
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new NoSuchElementException("No such image board");
         }
 
-        return getPicture(guildId, boardType, searchTerm, animatedOnly, explicit, 2, false, filters,
+        return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, 2, false, filters,
                 skippedResults, test
         );
     }
 
-    private BooruImage getPicture(long guildId, BoardType boardType, String searchTerm, boolean animatedOnly,
+    private BooruImage getPicture(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
                                             boolean explicit, int remaining, boolean softMode,
                                             List<String> filters, List<String> skippedResults, boolean test
     ) {
-        while (searchTerm.contains("  ")) searchTerm = searchTerm.replace("  ", " ");
-        searchTerm = searchTerm.replace(", ", ",")
+        while (searchKeys.contains("  ")) searchKeys = searchKeys.replace("  ", " ");
+        searchKeys = searchKeys.replace(", ", ",")
                 .replace("; ", ",")
                 .replace("+", " ");
-        StringBuilder finalSearchTerm = new StringBuilder(searchTerm
+        StringBuilder finalSearchKeys = new StringBuilder(searchKeys
                 .replace(",", " ")
                 .replace(" ", softMode ? "~ " : " ") +
                 (softMode ? "~" : ""));
+        List<String> usedSearchKeys = List.of(finalSearchKeys.toString().toLowerCase().split(" "));
 
         if (boardType.getMaxTags() < 0) {
-            filters.forEach(filter -> finalSearchTerm.append(" -").append(filter));
+            filters.forEach(filter -> finalSearchKeys.append(" -").append(filter));
         }
 
-        String finalSearchTermString = finalSearchTerm.toString();
+        String finalSearchKeyString = finalSearchKeys.toString();
         if (boardType.getMaxTags() >= 0) {
-            finalSearchTermString = reduceTags(finalSearchTermString, boardType.getMaxTags());
+            finalSearchKeyString = reduceTags(finalSearchKeyString, boardType.getMaxTags());
+            usedSearchKeys = usedSearchKeys.subList(0, Math.min(usedSearchKeys.size(), boardType.getMaxTags()));
         }
         if (boardType == BoardType.DANBOORU) {
-            finalSearchTermString += " -filetype:zip";
+            finalSearchKeyString += " -filetype:zip";
         }
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchTermString));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchKeyString));
         if (count == 0 && !test) {
             if (!softMode) {
-                return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit, remaining,
+                return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, remaining,
                         true, filters, skippedResults, test
                 );
             } else if (remaining > 0) {
-                if (searchTerm.contains(" ")) {
-                    return getPicture(guildId, boardType, searchTerm.replace(" ", "_"), animatedOnly, explicit,
+                if (searchKeys.contains(" ")) {
+                    return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit,
                             remaining - 1, false, filters, skippedResults, test
                     );
-                } else if (searchTerm.contains("_")) {
-                    return getPicture(guildId, boardType, searchTerm.replace("_", " "), animatedOnly, explicit,
+                } else if (searchKeys.contains("_")) {
+                    return getPicture(guildId, boardType, searchKeys.replace("_", " "), animatedOnly, explicit,
                             remaining - 1, false, filters, skippedResults, test
                     );
                 }
@@ -115,8 +117,8 @@ public class BooruDownloader {
         int shift = count >= 19_000 ? 2000 : 0;
         int page = (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
-        return getPictureOnPage(guildId, boardType, finalSearchTermString, page, animatedOnly, explicit,
-                filters, skippedResults
+        return getPictureOnPage(guildId, boardType, finalSearchKeyString, page, animatedOnly, explicit,
+                filters, skippedResults, usedSearchKeys
         );
     }
 
@@ -134,7 +136,7 @@ public class BooruDownloader {
 
     private BooruImage getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
                                                   boolean animatedOnly, boolean explicit, List<String> filters,
-                                                  List<String> skippedResults
+                                                  List<String> skippedResults, List<String> usedSearchKeys
     ) {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
@@ -181,10 +183,11 @@ public class BooruDownloader {
         }
 
         BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
-        return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId);
+        return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId, usedSearchKeys);
     }
 
-    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId) {
+    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId,
+                                        List<String> usedSearchKeys) {
         String imageUrl = image.getURL();
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
@@ -199,7 +202,8 @@ public class BooruDownloader {
                 .setOriginalImageUrl(originalImageUrl)
                 .setPageUrl(pageUrl)
                 .setScore(image.getScore())
-                .setInstant(Instant.ofEpochMilli(image.getCreationMillis()));
+                .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
+                .setTags(usedSearchKeys);
     }
 
     private boolean usesSharding(long guildId) {
