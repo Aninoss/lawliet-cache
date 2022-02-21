@@ -44,7 +44,7 @@ public class WebCache {
             LOGGER.info("caching website: {}", url);
         }
 
-        String key = "webresponse:" + url;
+        String key = "webresponse:" + url.hashCode();
         Object lock = lockManager.get(key);
 
         HttpResponse httpResponse;

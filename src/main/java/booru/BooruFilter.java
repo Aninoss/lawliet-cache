@@ -2,7 +2,6 @@ package booru;
 
 import java.util.List;
 import java.util.Random;
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 public class BooruFilter {
@@ -22,27 +21,25 @@ public class BooruFilter {
             return pornImages.get(0);
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            /* delete global duplicate images */
-            BooruImageCacheSearchKey booruImageCacheSearchKey = new BooruImageCacheSearchKey(jedis, guildId, domain, searchKey);
-            booruImageCacheSearchKey.trim(maxSize);
-            pornImages = booruImageCacheSearchKey.filter(pornImages);
+        /* delete global duplicate images */
+        BooruImageCacheSearchKey booruImageCacheSearchKey = new BooruImageCacheSearchKey(jedisPool, guildId, domain, searchKey);
+        booruImageCacheSearchKey.trim(maxSize);
+        pornImages = booruImageCacheSearchKey.filter(pornImages);
 
-            /* delete duplicate images for this command usage */
-            pornImages.removeIf(pornImageMeta -> usedResult.contains(pornImageMeta.getImageUrl()));
+        /* delete duplicate images for this command usage */
+        pornImages.removeIf(pornImageMeta -> usedResult.contains(pornImageMeta.getImageUrl()));
 
-            long totalWeight = pornImages.stream().mapToLong(BooruImageMeta::getWeight).sum();
-            long pos = (long) (new Random().nextDouble() * totalWeight);
-            for (BooruImageMeta pornImageMeta : pornImages) {
-                if ((pos -= pornImageMeta.getWeight()) < 0) {
-                    booruImageCacheSearchKey.add(pornImageMeta.getImageUrl());
-                    usedResult.add(pornImageMeta.getImageUrl());
-                    return pornImageMeta;
-                }
+        long totalWeight = pornImages.stream().mapToLong(BooruImageMeta::getWeight).sum();
+        long pos = (long) (new Random().nextDouble() * totalWeight);
+        for (BooruImageMeta pornImageMeta : pornImages) {
+            if ((pos -= pornImageMeta.getWeight()) < 0) {
+                booruImageCacheSearchKey.add(pornImageMeta.getImageUrl());
+                usedResult.add(pornImageMeta.getImageUrl());
+                return pornImageMeta;
             }
-
-            return null;
         }
+
+        return null;
     }
 
 }
