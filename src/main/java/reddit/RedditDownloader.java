@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import booru.BooruDownloader;
 import core.HttpResponse;
 import core.WebCache;
 import org.json.JSONArray;
@@ -19,11 +18,10 @@ import util.InternetUtil;
 
 public class RedditDownloader {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(RedditDownloader.class);
     private final static String KEY_REDDIT_BLOCK = "reddit_block";
     private final static int TIMEOUT_MIN = 60;
     private final static int MAX_PAGE = 2;
-
 
     private final WebCache webCache;
     private final JedisPool jedisPool;

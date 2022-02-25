@@ -1,5 +1,6 @@
 package core;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import booru.BooruDownloader;
@@ -15,6 +16,8 @@ import reddit.RedditDownloader;
 import reddit.RedditPost;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import twitch.TwitchDownloader;
+import twitch.TwitchStream;
 
 @Path("")
 @Singleton
@@ -29,10 +32,12 @@ public class RestService {
     );
     private final LockManager lockManager = new LockManager();
     private final WebCache webCache = new WebCache(jedisPool, lockManager);
-    private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
-    private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);
     private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
     private final CheckOwnConnection checkOwnConnection = new CheckOwnConnection(webCache.getClient());
+
+    private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
+    private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);
+    private final TwitchDownloader twitchDownloader = new TwitchDownloader(webCache, jedisPool);
 
     @GET
     @Path("/ping")
@@ -85,6 +90,18 @@ public class RestService {
             return redditDownloader.retrievePostsBulk(subreddit, orderBy);
         } catch (Throwable e) {
             LOGGER.error("Error in /reddit (bulk)", e);
+            throw e;
+        }
+    }
+
+    @GET
+    @Path("/twitch/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public TwitchStream redditBulk(@PathParam("name") String name) throws IOException {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            return twitchDownloader.retrieveStream(name);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /twitch", e);
             throw e;
         }
     }
