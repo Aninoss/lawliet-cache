@@ -16,8 +16,9 @@ public class BooruFilter {
                                               List<BooruImageMeta> pornImages, List<String> usedResult,
                                               int maxSize
     ) {
-        if (pornImages.size() == 0) return null;
-        else if (pornImages.size() == 1) {
+        if (pornImages.size() == 0) {
+            return null;
+        } else if (pornImages.size() == 1) {
             return pornImages.get(0);
         }
 

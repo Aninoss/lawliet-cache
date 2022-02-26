@@ -51,8 +51,8 @@ public class BooruDownloader {
     }
 
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
-                                           boolean explicit, List<String> filters, List<String> skippedResults,
-                                           boolean test) {
+                                 boolean explicit, List<String> filters, List<String> skippedResults,
+                                 boolean test) {
         searchKeys = NSFWUtil.filterPornSearchKey(searchKeys, filters);
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
@@ -65,8 +65,8 @@ public class BooruDownloader {
     }
 
     private BooruImage getPicture(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
-                                            boolean explicit, int remaining, boolean softMode,
-                                            List<String> filters, List<String> skippedResults, boolean test
+                                  boolean explicit, int remaining, boolean softMode,
+                                  List<String> filters, List<String> skippedResults, boolean test
     ) {
         while (searchKeys.contains("  ")) searchKeys = searchKeys.replace("  ", " ");
         searchKeys = searchKeys.replace(", ", ",")
@@ -135,8 +135,8 @@ public class BooruDownloader {
     }
 
     private BooruImage getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
-                                                  boolean animatedOnly, boolean explicit, List<String> filters,
-                                                  List<String> skippedResults, List<String> usedSearchKeys
+                                        boolean animatedOnly, boolean explicit, List<String> filters,
+                                        List<String> skippedResults, List<String> usedSearchKeys
     ) {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
@@ -183,7 +183,11 @@ public class BooruDownloader {
         }
 
         BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
-        return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId, usedSearchKeys);
+        if (booruImageMeta != null) {
+            return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId, usedSearchKeys);
+        } else {
+            return null;
+        }
     }
 
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId,

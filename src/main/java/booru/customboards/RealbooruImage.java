@@ -21,7 +21,8 @@ public class RealbooruImage implements BoardImage {
     private long change; // timestamp in seconds
 
     public String getFileUrl() {
-        return "https://realbooru.com/images/" + directory + "/" + image;
+        String dir = image.substring(0, 2) + "/" + image.substring(2, 4);
+        return "https://realbooru.com/images/" + dir + "/" + image;
     }
 
     public String getDirectory() {
