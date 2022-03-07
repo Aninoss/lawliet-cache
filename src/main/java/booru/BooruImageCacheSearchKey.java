@@ -56,6 +56,8 @@ public class BooruImageCacheSearchKey {
             if (jedis.exists(oldKey)) {
                 jedis.rename(oldKey, getKey());
             }
+        } catch (Throwable e) {
+            //ignore
         }
     }
 

@@ -7,6 +7,8 @@ import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
+import net.kodehawa.lib.imageboards.entities.exceptions.QueryFailedException;
+import net.kodehawa.lib.imageboards.entities.exceptions.QueryParseException;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -142,6 +144,9 @@ public class BooruDownloader {
         List<? extends BoardImage> boardImages;
         try {
             boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
+        } catch (QueryFailedException | QueryParseException e) {
+            LOGGER.error("Failed to query {}", boardType.getDomain());
+            return null;
         } catch (Throwable e) {
             LOGGER.error("Error in imageboard type {}", boardType.getDomain(), e);
             return null;

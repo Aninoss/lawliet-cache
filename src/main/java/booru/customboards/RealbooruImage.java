@@ -13,6 +13,7 @@ public class RealbooruImage implements BoardImage {
     private long id;
     private String directory;
     private String image;
+    private String hash;
     private int height;
     private String tags;
     private int width;
@@ -21,8 +22,8 @@ public class RealbooruImage implements BoardImage {
     private long change; // timestamp in seconds
 
     public String getFileUrl() {
-        String dir = image.substring(0, 2) + "/" + image.substring(2, 4);
-        return "https://realbooru.com/images/" + dir + "/" + image;
+        String dir = hash.substring(0, 2) + "/" + hash.substring(2, 4);
+        return "https://realbooru.com/images/" + dir + "/" + hash + "." + image.split("\\.")[1];
     }
 
     public String getDirectory() {
@@ -85,6 +86,10 @@ public class RealbooruImage implements BoardImage {
     @Override
     public long getCreationMillis() {
         return change * 1000;
+    }
+
+    public String getHash() {
+        return hash;
     }
 
 }

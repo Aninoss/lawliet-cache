@@ -10,16 +10,28 @@ public abstract class FurryCounter implements Counter {
     private final static Logger LOGGER = LoggerFactory.getLogger(FurryCounter.class);
 
     protected int countFurry(WebCache webCache, String url) {
+        String domain = url.split("/")[2];
         String data;
         try {
             data = webCache.get(url, 15).getBody();
         } catch (Throwable e) {
-            LOGGER.error("Error for domain {}", url.split("/")[2], e);
+            LOGGER.error("Error for domain {}", domain, e);
+            return 0;
+        }
+
+        if (data == null) {
+            LOGGER.error("Error for domain {}: empty data", domain);
             return 0;
         }
 
         int posts = StringUtil.countMatches(data, "<article id=\"post_");
-        String paginator = StringUtil.extractGroups(data, "<div class=\"paginator\">", "</menu></div>")[0];
+        String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\">", "</menu></div>");
+        if (groups.length == 0) {
+            LOGGER.error("Error for domain {}: empty groups", domain);
+            return 0;
+        }
+
+        String paginator = groups[0];
         String[] pageNumbers = StringUtil.extractGroups(paginator, ">", "<");
 
         int pageMax = 0;

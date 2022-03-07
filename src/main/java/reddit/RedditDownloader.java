@@ -140,7 +140,7 @@ public class RedditDownloader {
         for (int i = 0; i < postArrayJson.length(); i++) {
             JSONObject entry = postArrayJson.getJSONObject(i);
             JSONObject data = entry.getJSONObject("data");
-            if (!data.has("stickied") || !data.getBoolean("stickied")) {
+            if ((!data.has("stickied") || !data.getBoolean("stickied")) && data.has("author")) {
                 newArray.put(entry);
             }
         }

@@ -1,5 +1,6 @@
 package core;
 
+import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +74,7 @@ public class WebCache {
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < 10) {
+        if (domainBlockCounter < 25) {
             try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(9))) {
                 Request request = new Request.Builder()
                         .url(url)
@@ -86,9 +87,13 @@ public class WebCache {
                             .setCode(response.code())
                             .setBody(response.body().string());
                 }
-            } catch (Throwable e) {
+            } catch (InterruptedIOException e) {
                 long errors = jedis.incr(domainBlockKey);
-                LOGGER.error("Web cache error ({}; {} errors)", domain, errors, e);
+                LOGGER.error("Web cache time out ({}; {} errors)", domain, errors);
+                return new HttpResponse()
+                        .setCode(500);
+            } catch (Throwable e) {
+                LOGGER.error("Web cache error ({})", domain, e);
                 return new HttpResponse()
                         .setCode(500);
             } finally {

@@ -49,7 +49,7 @@ public enum BoardType {
             DefaultBoards.E621,
             FurryImage.class,
             new E621Counter(),
-            -1
+            40
     ),
 
     KONACHAN(
@@ -79,7 +79,7 @@ public enum BoardType {
             DefaultBoards.E926,
             FurryImage.class,
             new E926Counter(),
-            -1
+            40
     );
 
     private final String domain;
