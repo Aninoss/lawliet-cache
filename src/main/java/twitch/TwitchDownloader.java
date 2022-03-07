@@ -49,7 +49,7 @@ public class TwitchDownloader {
         scheduler.scheduleAtFixedRate(() -> {
             try (Jedis jedis = jedisPool.getResource()) {
                 SetParams params = new SetParams();
-                params.ex(Duration.ofMinutes(5).toSeconds());
+                params.ex(Duration.ofMinutes(4).toSeconds());
                 params.nx();
                 String res = jedis.set(KEY_TWITCH_SCHEDULER_LOCK, "true", params);
                 if ("OK".equals(res)) {
@@ -60,7 +60,7 @@ public class TwitchDownloader {
                     }
                 }
             }
-        }, 0, 1, TimeUnit.MINUTES);
+        }, 0, 10, TimeUnit.SECONDS);
     }
 
     private void schedulerTask() throws IOException {
@@ -177,7 +177,6 @@ public class TwitchDownloader {
     }
 
     private List<TwitchStream> retrieveStreamsRaw(List<String> userIds) throws IOException {
-        LOGGER.info("### RETRIEVING {} STREAMS", userIds.size()); //TODO
         HashMap<String, JSONObject> streamMap = new HashMap<>();
         int maxPage = (userIds.size() - 1) / 100;
         for (int page = 0; page <= maxPage; page++) {
