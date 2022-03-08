@@ -61,6 +61,10 @@ public class BooruDownloader {
             throw new NoSuchElementException("No such image board");
         }
 
+        if (boardType == BoardType.DANBOORU) {
+            return null; //TODO: temporary
+        }
+
         return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, 2, false, filters,
                 skippedResults, test
         );

@@ -1,6 +1,7 @@
 package booru.counters;
 
 import core.WebCache;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,15 @@ public class DanbooruCounter implements Counter {
             return 0;
         }
 
-        JSONObject json = new JSONObject(data).getJSONObject("counts");
+        JSONObject json;
+        try {
+            json = new JSONObject(data).getJSONObject("counts");
+        } catch (JSONException e) {
+            LOGGER.error("Danbooru invalid counter response");
+            return 0; //TODO
+        }
+
+
         if (json.has("posts") && !json.isNull("posts")) {
             return json.getInt("posts");
         } else {
