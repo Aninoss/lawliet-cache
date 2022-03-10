@@ -26,8 +26,8 @@ public class DanbooruCounter implements Counter {
         try {
             json = new JSONObject(data).getJSONObject("counts");
         } catch (JSONException e) {
-            LOGGER.error("Danbooru invalid counter response");
-            return 0; //TODO
+            LOGGER.error("Danbooru invalid counter response: {}", data);
+            return 0;
         }
 
 

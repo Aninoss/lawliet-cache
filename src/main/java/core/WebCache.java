@@ -1,8 +1,11 @@
 package core;
 
 import java.io.InterruptedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import okhttp3.*;
 import org.slf4j.Logger;
@@ -19,6 +22,7 @@ public class WebCache {
     private final JedisPool jedisPool;
     private final LockManager lockManager;
     private final OkHttpClient client;
+    private final Random random = new Random();
 
     public WebCache(JedisPool jedisPool, LockManager lockManager) {
         this.jedisPool = jedisPool;
@@ -38,7 +42,10 @@ public class WebCache {
 
     public HttpResponse get(String url, int minutesCached) {
         if (url.startsWith("https://danbooru.donmai.us/")) {
-            url += String.format("&api_key=%s&login=%s", System.getenv("DANBOORU_API_TOKEN"), System.getenv("DANBOORU_LOGIN"));
+            url += String.format("&login=%s&api_key=%s", System.getenv("DANBOORU_LOGIN"), System.getenv("DANBOORU_API_TOKEN"));
+            String[] proxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
+            String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
+            url = "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
         }
 
         if (!Program.isProductionMode()) {
