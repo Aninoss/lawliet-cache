@@ -1,5 +1,6 @@
 package booru;
 
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -93,7 +94,7 @@ public class BooruDownloader {
             finalSearchKeyString += " -filetype:zip";
         }
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, finalSearchKeyString));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeyString));
         if (count == 0 && !test) {
             if (!softMode) {
                 return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, remaining,
@@ -143,8 +144,16 @@ public class BooruDownloader {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
         try {
-            boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
-        } catch (QueryFailedException | QueryParseException e) {
+            try {
+                boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
+            } catch (RuntimeException e) {
+                if (e.getCause() != null) {
+                    throw e.getCause();
+                } else {
+                    throw e;
+                }
+            }
+        } catch (QueryFailedException | QueryParseException | SocketTimeoutException e) {
             LOGGER.error("Failed to query {}", boardType.getDomain());
             return null;
         } catch (Throwable e) {
