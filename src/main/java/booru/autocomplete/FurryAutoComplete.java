@@ -2,6 +2,7 @@ package booru.autocomplete;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +27,7 @@ public class FurryAutoComplete implements BooruAutoComplete {
 
         ArrayList<BooruChoice> tags = new ArrayList<>();
         String url = "https://" + domain + "/tags/autocomplete.json?search%5Bname_matches%5D=" + URLEncoder.encode(search, StandardCharsets.UTF_8) + "&expiry=7";
-        String data = webCache.get(url, 60).getBody();
+        String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes()).getBody();
         JSONArray arrayJson = new JSONArray(data);
         for (int i = 0; i < arrayJson.length(); i++) {
             JSONObject tagJson = arrayJson.getJSONObject(i);
