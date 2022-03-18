@@ -11,6 +11,7 @@ import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.impl.*;
+import redis.clients.jedis.JedisPool;
 
 public enum BoardType {
 
@@ -131,8 +132,8 @@ public enum BoardType {
         return boardImageClass;
     }
 
-    public int count(WebCache webCache, String tags) {
-        return counter.count(webCache, tags);
+    public int count(WebCache webCache, JedisPool jedisPool, String tags) {
+        return counter.count(webCache, jedisPool, tags);
     }
 
     public List<BooruChoice> retrieveAutoComplete(WebCache webCache, String search) {

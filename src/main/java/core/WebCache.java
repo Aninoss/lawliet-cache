@@ -100,7 +100,7 @@ public class WebCache {
                 return new HttpResponse()
                         .setCode(500);
             } catch (Throwable e) {
-                LOGGER.error("Web cache error ({})", domain, e);
+                LOGGER.error("Web cache connection error ({})", domain);
                 return new HttpResponse()
                         .setCode(500);
             } finally {
