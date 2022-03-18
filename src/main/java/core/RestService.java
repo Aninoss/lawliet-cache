@@ -3,6 +3,7 @@ package core;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import booru.BooruChoice;
 import booru.BooruDownloader;
 import booru.BooruImage;
 import booru.BooruRequest;
@@ -64,6 +65,18 @@ public class RestService {
             );
         } catch (Throwable e) {
             LOGGER.error("Error in /booru", e);
+            throw e;
+        }
+    }
+
+    @GET
+    @Path("/booru_autocomplete/{domain}/{search}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<BooruChoice> booruAutoComplete(@PathParam("domain") String domain, @PathParam("search") String search) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            return booruDownloader.getTags(domain, search);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /booru_autocomplete", e);
             throw e;
         }
     }

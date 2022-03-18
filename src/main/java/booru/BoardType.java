@@ -1,5 +1,7 @@
 package booru;
 
+import java.util.List;
+import booru.autocomplete.*;
 import booru.counters.*;
 import booru.customboards.RealbooruBoard;
 import booru.customboards.RealbooruImage;
@@ -19,7 +21,8 @@ public enum BoardType {
             new Rule34Board(),
             Rule34Image.class,
             new Rule34Counter(),
-            -1
+            -1,
+            new DefaultAutoComplete("api.rule34.xxx")
     ),
 
     SAFEBOORU(
@@ -29,7 +32,8 @@ public enum BoardType {
             DefaultBoards.SAFEBOORU,
             SafebooruImage.class,
             new SafebooruCounter(),
-            -1
+            -1,
+            new DefaultAutoComplete("safebooru.org")
     ),
 
     REALBOORU(
@@ -39,7 +43,8 @@ public enum BoardType {
             new RealbooruBoard(),
             RealbooruImage.class,
             new RealbooruCounter(),
-            -1
+            -1,
+            new DefaultAutoComplete("realbooru.com")
     ),
 
     E621(
@@ -49,7 +54,8 @@ public enum BoardType {
             DefaultBoards.E621,
             FurryImage.class,
             new E621Counter(),
-            40
+            40,
+            new FurryAutoComplete("e621.net")
     ),
 
     KONACHAN(
@@ -59,7 +65,8 @@ public enum BoardType {
             DefaultBoards.KONACHAN,
             KonachanImage.class,
             new KonachanCounter(),
-            6
+            6,
+            new EmptyAutoComplete()
     ),
 
     DANBOORU(
@@ -69,7 +76,8 @@ public enum BoardType {
             DefaultBoards.DANBOORU,
             DanbooruImage.class,
             new DanbooruCounter(),
-            10
+            10,
+            new DanbooruAutoComplete()
     ),
 
     E926(
@@ -79,7 +87,8 @@ public enum BoardType {
             DefaultBoards.E926,
             FurryImage.class,
             new E926Counter(),
-            40
+            40,
+            new FurryAutoComplete("e926.net")
     );
 
     private final String domain;
@@ -89,8 +98,9 @@ public enum BoardType {
     private final Class<? extends BoardImage> boardImageClass;
     private final Counter counter;
     private final int maxTags;
+    private final BooruAutoComplete autoComplete;
 
-    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass, Counter counter, int maxTags) {
+    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass, Counter counter, int maxTags, BooruAutoComplete autoComplete) {
         this.domain = domain;
         this.pagePrefix = pagePrefix;
         this.maxLimit = maxLimit;
@@ -98,6 +108,7 @@ public enum BoardType {
         this.boardImageClass = boardImageClass;
         this.counter = counter;
         this.maxTags = maxTags;
+        this.autoComplete = autoComplete;
     }
 
     public String getDomain() {
@@ -122,6 +133,10 @@ public enum BoardType {
 
     public int count(WebCache webCache, String tags) {
         return counter.count(webCache, tags);
+    }
+
+    public List<BooruChoice> retrieveAutoComplete(WebCache webCache, String search) {
+        return autoComplete.retrieve(webCache, search);
     }
 
     public int getMaxTags() {

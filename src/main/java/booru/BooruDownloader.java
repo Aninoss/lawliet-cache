@@ -52,6 +52,19 @@ public class BooruDownloader {
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
     }
 
+    public List<BooruChoice> getTags(String domain, String search) {
+        if (search.equals("+")) {
+            search = "";
+        }
+
+        BoardType boardType = BoardType.fromDomain(domain);
+        if (boardType == null) {
+            throw new NoSuchElementException("No such image board");
+        }
+
+        return boardType.retrieveAutoComplete(webCache, search);
+    }
+
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
                                  boolean explicit, List<String> filters, List<String> skippedResults,
                                  boolean test) {
