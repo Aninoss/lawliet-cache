@@ -218,14 +218,23 @@ public class BooruDownloader {
     }
 
     private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId,
-                                        List<String> usedSearchKeys) {
+                                        List<String> usedSearchKeys
+    ) {
         String imageUrl = image.getURL();
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
-        if (boardType == BoardType.RULE34 && contentType.isVideo() && usesSharding(guildId)) {
-            String[] parts = imageUrl.substring(1).split("/");
-            int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
-            imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+        if (boardType == BoardType.RULE34) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                if (contentType.isVideo()) {
+                    if (usesSharding(guildId)) {
+                        String[] parts = imageUrl.substring(1).split("/");
+                        int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
+                        imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                    }
+                    jedis.incr("rule34_video");
+                }
+                jedis.incr("rule34_total");
+            }
         }
 
         return new BooruImage()

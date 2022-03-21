@@ -81,7 +81,7 @@ public class WebCache {
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < 25) {
+        if (domainBlockCounter < 20) {
             try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(9))) {
                 Request request = new Request.Builder()
                         .url(url)
