@@ -75,6 +75,13 @@ public class BooruDownloader {
             throw new NoSuchElementException("No such image board");
         }
 
+        searchKeys = searchKeys.replaceAll("[,;+]", " ")
+                .replaceAll(" {2,}", " ")
+                .toLowerCase();
+        if (!canBeVideo) {
+            searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
+        }
+
         return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, canBeVideo, 2, false, filters, skippedResults, test);
     }
 
@@ -82,33 +89,27 @@ public class BooruDownloader {
                                   boolean explicit, boolean canBeVideo, int remaining, boolean softMode,
                                   List<String> filters, List<String> skippedResults, boolean test
     ) {
-        while (searchKeys.contains("  ")) searchKeys = searchKeys.replace("  ", " ");
-        searchKeys = searchKeys.replace(", ", ",")
-                .replace("; ", ",")
-                .replace("+", " ");
-        StringBuilder finalSearchKeys = new StringBuilder(searchKeys
-                .replace(",", " ")
-                .replace(" ", softMode ? "~ " : " ") +
-                (softMode ? "~" : ""));
-        List<String> usedSearchKeys = List.of(finalSearchKeys.toString().toLowerCase().split(" "));
+        StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
+        List<String> visibleSearchKeysList = List.of(finalSearchKeys.toString().split(" "));
 
         if (boardType.getMaxTags() < 0) {
-            filters.forEach(filter -> finalSearchKeys.append(" -").append(filter));
+            for (String filter : filters) {
+                finalSearchKeys.append(" -").append(filter);
+            }
         }
 
-        String finalSearchKeyString = finalSearchKeys.toString();
         if (boardType.getMaxTags() >= 0) {
-            finalSearchKeyString = reduceTags(finalSearchKeyString, boardType.getMaxTags() - 1);
-            usedSearchKeys = usedSearchKeys.subList(0, Math.min(usedSearchKeys.size(), boardType.getMaxTags() - 1));
+            finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - 1));
+            visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - 1));
         }
         if (boardType == BoardType.DANBOORU) {
-            finalSearchKeyString += " -filetype:zip";
+            finalSearchKeys.append(" -filetype:zip");
         }
         if (!canBeVideo) {
-            finalSearchKeyString += " -video";
+            finalSearchKeys.append(" -video");
         }
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeyString));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeys.toString()));
         if (count == 0 && !test) {
             if (!softMode) {
                 return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining, true, filters, skippedResults, test);
@@ -128,8 +129,8 @@ public class BooruDownloader {
         int shift = count >= 19_000 ? 2000 : 0;
         int page = (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
-        return getPictureOnPage(guildId, boardType, finalSearchKeyString, page, animatedOnly, explicit, canBeVideo,
-                filters, skippedResults, usedSearchKeys
+        return getPictureOnPage(guildId, boardType, finalSearchKeys.toString(), page, animatedOnly, explicit, canBeVideo,
+                filters, skippedResults, visibleSearchKeysList
         );
     }
 
