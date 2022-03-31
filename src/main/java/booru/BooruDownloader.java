@@ -173,6 +173,9 @@ public class BooruDownloader {
         } catch (QueryFailedException | QueryParseException | SocketTimeoutException e) {
             LOGGER.error("Failed to query {}", boardType.getDomain());
             return null;
+        } catch (InterruptedException e) {
+            //ignore
+            return null;
         } catch (Throwable e) {
             LOGGER.error("Error in imageboard type {}", boardType.getDomain(), e);
             return null;
