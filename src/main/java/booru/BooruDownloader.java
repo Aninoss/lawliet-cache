@@ -79,7 +79,11 @@ public class BooruDownloader {
                 .replaceAll(" {2,}", " ")
                 .toLowerCase();
         if (!canBeVideo) {
-            searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
+            if (boardType == BoardType.E621 || boardType == BoardType.E926) {
+                searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
+            } else {
+                searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
+            }
         }
 
         return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, canBeVideo, 2, false, filters, skippedResults, test);
@@ -106,7 +110,11 @@ public class BooruDownloader {
             finalSearchKeys.append(" -filetype:zip");
         }
         if (!canBeVideo) {
-            finalSearchKeys.append(" -video");
+            if (boardType == BoardType.E621 || boardType == BoardType.E926) {
+                finalSearchKeys.append(" -webm");
+            } else {
+                finalSearchKeys.append(" -video");
+            }
         }
 
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeys.toString()));
