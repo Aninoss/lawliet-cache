@@ -276,9 +276,9 @@ public class BooruDownloader {
         return Math.abs(Objects.hash(dir, id)) % mediaServerMaxShards;
     }
 
-    private String translateVideoUrlToOwnCDN(String domain, String videoUrl) {
-        String[] parts = videoUrl.split("/");
-        return "https://" + domain + "/media/rule34/" + parts[parts.length - 2] + "/" + parts[parts.length - 1];
+    private String translateVideoUrlToOwnCDN(String targetDomain, String videoUrl) {
+        String[] slashParts = videoUrl.split("/");
+        return "https://" + targetDomain + "/media/rule34/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0];
     }
 
 }
