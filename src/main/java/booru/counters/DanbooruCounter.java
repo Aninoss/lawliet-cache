@@ -17,7 +17,7 @@ public class DanbooruCounter implements Counter {
     private static final String KEY_DANBOORU_BLOCK = "danbooru_block";
 
     @Override
-    public int count(WebCache webCache, JedisPool jedisPool, String tags) {
+    public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
         try (Jedis jedis = jedisPool.getResource()) {
             if (jedis.exists(KEY_DANBOORU_BLOCK)) {
                 return 0;
@@ -27,7 +27,11 @@ public class DanbooruCounter implements Counter {
         String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags + " status:active");
         String data;
         try {
-            data = webCache.get(url, 15).getBody();
+            if (withCache) {
+                data = webCache.get(url, 60).getBody();
+            } else {
+                data = webCache.getWithoutCache(url).getBody();
+            }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", url.split("/")[2], e);
             return 0;

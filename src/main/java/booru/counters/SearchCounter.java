@@ -9,11 +9,15 @@ public abstract class SearchCounter implements Counter {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(SearchCounter.class);
 
-    protected int countSearch(WebCache webCache, String url) {
+    protected int countSearch(WebCache webCache, String url, boolean withCache) {
         String domain = url.split("/")[2];
         String data;
         try {
-            data = webCache.get(url, 15).getBody();
+            if (withCache) {
+                data = webCache.get(url, 60).getBody();
+            } else {
+                data = webCache.getWithoutCache(url).getBody();
+            }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", domain, e);
             return 0;

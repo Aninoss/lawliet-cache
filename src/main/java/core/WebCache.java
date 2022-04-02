@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.params.SetParams;
 import util.SerializeUtil;
 
 public class WebCache {
@@ -41,20 +42,8 @@ public class WebCache {
     }
 
     public HttpResponse get(String url, int minutesCached) {
-        if (url.startsWith("https://danbooru.donmai.us/")) {
-            url += String.format("&login=%s&api_key=%s", System.getenv("DANBOORU_LOGIN"), System.getenv("DANBOORU_API_TOKEN"));
-            String[] proxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
-            String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
-            url = "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
-        }
-
-        if (!Program.isProductionMode()) {
-            LOGGER.info("caching website: {}", url);
-        }
-
         String key = "webresponse:" + url.hashCode();
         Object lock = lockManager.get(key);
-
         HttpResponse httpResponse;
         synchronized (lock) {
             try (Jedis jedis = jedisPool.getResource()) {
@@ -62,10 +51,11 @@ public class WebCache {
                 byte[] data = jedis.get(keyBytes);
                 if (data == null) {
                     httpResponse = getWithoutCache(jedis, url);
-                    jedis.set(keyBytes, SerializeUtil.serialize(httpResponse));
-                    jedis.expire(keyBytes, Duration.ofMinutes(httpResponse.getCode() / 100 != 5 ? minutesCached : 1).toSeconds());
+                    SetParams setParams = new SetParams();
+                    setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
+                    jedis.set(keyBytes, SerializeUtil.serialize(httpResponse), setParams);
                     if (!Program.isProductionMode()) {
-                        LOGGER.info("new cache entry for: {}", url);
+                        LOGGER.info("new cache entry for: {} ({})", url, key);
                     }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);
@@ -76,7 +66,24 @@ public class WebCache {
         return httpResponse;
     }
 
-    public HttpResponse getWithoutCache(Jedis jedis, String url) {
+    public HttpResponse getWithoutCache(String url) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            return getWithoutCache(jedis, url);
+        }
+    }
+
+    private HttpResponse getWithoutCache(Jedis jedis, String url) {
+        if (url.startsWith("https://danbooru.donmai.us/")) {
+            url += String.format("&login=%s&api_key=%s", System.getenv("DANBOORU_LOGIN"), System.getenv("DANBOORU_API_TOKEN"));
+            String[] proxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
+            String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
+            url = "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+        }
+
+        if (!Program.isProductionMode()) {
+            LOGGER.info("requesting website: {}", url);
+        }
+
         String domain = url.split("/")[2];
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);

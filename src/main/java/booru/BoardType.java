@@ -132,8 +132,8 @@ public enum BoardType {
         return boardImageClass;
     }
 
-    public int count(WebCache webCache, JedisPool jedisPool, String tags) {
-        return counter.count(webCache, jedisPool, tags);
+    public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
+        return counter.count(webCache, jedisPool, tags, withCache);
     }
 
     public List<BooruChoice> retrieveAutoComplete(WebCache webCache, String search) {

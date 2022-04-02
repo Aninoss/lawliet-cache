@@ -9,11 +9,15 @@ public abstract class FurryCounter implements Counter {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(FurryCounter.class);
 
-    protected int countFurry(WebCache webCache, String url) {
+    protected int countFurry(WebCache webCache, String url, boolean withCache) {
         String domain = url.split("/")[2];
         String data;
         try {
-            data = webCache.get(url, 15).getBody();
+            if (withCache) {
+                data = webCache.get(url, 60).getBody();
+            } else {
+                data = webCache.getWithoutCache(url).getBody();
+            }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", domain, e);
             return 0;

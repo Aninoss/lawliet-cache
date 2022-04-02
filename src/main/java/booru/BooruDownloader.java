@@ -30,6 +30,7 @@ public class BooruDownloader {
     private final WebCache webCache;
     private final Random random = new Random();
     private final JedisPool jedisPool;
+    private final BooruTester booruTester;
     private final int mediaServerCooldown;
     private final int mediaServerMaxShards;
 
@@ -48,6 +49,7 @@ public class BooruDownloader {
                 })
                 .build();
         this.webCache = webCache;
+        this.booruTester = new BooruTester(webCache, jedisPool);
         this.mediaServerCooldown = Integer.parseInt(System.getenv("MS_COOLDOWN_MILLIS"));
         this.mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
@@ -75,23 +77,27 @@ public class BooruDownloader {
             throw new NoSuchElementException("No such image board");
         }
 
-        searchKeys = searchKeys.replaceAll("[,;+]", " ")
-                .replaceAll(" {2,}", " ")
-                .toLowerCase();
-        if (!canBeVideo) {
-            if (boardType == BoardType.E621 || boardType == BoardType.E926) {
-                searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
-            } else {
-                searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
+        if (test) {
+            return booruTester.test(boardType) ? new BooruImage() : null;
+        } else {
+            searchKeys = searchKeys.replaceAll("[,;+]", " ")
+                    .replaceAll(" {2,}", " ")
+                    .toLowerCase();
+            if (!canBeVideo) {
+                if (boardType == BoardType.E621 || boardType == BoardType.E926) {
+                    searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
+                } else {
+                    searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
+                }
             }
-        }
 
-        return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, canBeVideo, 2, false, filters, skippedResults, test);
+            return getPicture(guildId, boardType, searchKeys, animatedOnly, explicit, canBeVideo, 2, false, filters, skippedResults);
+        }
     }
 
     private BooruImage getPicture(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
                                   boolean explicit, boolean canBeVideo, int remaining, boolean softMode,
-                                  List<String> filters, List<String> skippedResults, boolean test
+                                  List<String> filters, List<String> skippedResults
     ) {
         StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
         List<String> visibleSearchKeysList = List.of(finalSearchKeys.toString().split(" "));
@@ -117,21 +123,19 @@ public class BooruDownloader {
             }
         }
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeys.toString()));
-        if (count == 0 && !test) {
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeys.toString(), true));
+        if (count == 0) {
             if (!softMode) {
-                return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining, true, filters, skippedResults, test);
+                return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining, true, filters, skippedResults);
             } else if (remaining > 0) {
                 if (searchKeys.contains(" ")) {
-                    return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining - 1, false, filters, skippedResults, test);
+                    return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining - 1, false, filters, skippedResults);
                 } else if (searchKeys.contains("_")) {
-                    return getPicture(guildId, boardType, searchKeys.replace("_", " "), animatedOnly, explicit, canBeVideo, remaining - 1, false, filters, skippedResults, test);
+                    return getPicture(guildId, boardType, searchKeys.replace("_", " "), animatedOnly, explicit, canBeVideo, remaining - 1, false, filters, skippedResults);
                 }
             }
 
             return null;
-        } else if (test) {
-            return new BooruImage();
         }
 
         int shift = count >= 19_000 ? 2000 : 0;
