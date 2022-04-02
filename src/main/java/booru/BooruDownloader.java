@@ -78,7 +78,7 @@ public class BooruDownloader {
         }
 
         if (test) {
-            return booruTester.test(boardType) ? new BooruImage() : null;
+            return booruTester.get(boardType) ? new BooruImage() : null;
         } else {
             searchKeys = searchKeys.replaceAll("[,;+]", " ")
                     .replaceAll(" {2,}", " ")
