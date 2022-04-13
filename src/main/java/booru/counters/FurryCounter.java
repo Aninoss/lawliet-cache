@@ -23,7 +23,7 @@ public abstract class FurryCounter implements Counter {
             return 0;
         }
 
-        if (data == null) {
+        if (data == null || data.isBlank()) {
             LOGGER.error("Error for domain {}: empty data", domain);
             return 0;
         }

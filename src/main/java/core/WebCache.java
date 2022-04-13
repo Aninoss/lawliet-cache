@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLHandshakeException;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ public class WebCache {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebCache.class);
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
+    public static final int MAX_ERRORS = 20;
 
     private final JedisPool jedisPool;
     private final LockManager lockManager;
@@ -88,7 +90,7 @@ public class WebCache {
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < 20) {
+        if (domainBlockCounter < MAX_ERRORS) {
             try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(9))) {
                 Request request = new Request.Builder()
                         .url(url)
@@ -96,12 +98,16 @@ public class WebCache {
                         .build();
 
                 try (Response response = client.newCall(request).execute()) {
-                    jedis.set(domainBlockKey, "0");
+                    if (domain.equals("e621.net") && response.code() == 503) {
+                        jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
+                    } else {
+                        jedis.set(domainBlockKey, "0");
+                    }
                     return new HttpResponse()
                             .setCode(response.code())
                             .setBody(response.body().string());
                 }
-            } catch (InterruptedIOException e) {
+            } catch (InterruptedIOException | SSLHandshakeException e) {
                 long errors = jedis.incr(domainBlockKey);
                 LOGGER.error("Web cache time out ({}; {} errors)", domain, errors);
                 return new HttpResponse()
