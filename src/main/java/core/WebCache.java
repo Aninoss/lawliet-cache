@@ -75,18 +75,19 @@ public class WebCache {
     }
 
     private HttpResponse getWithoutCache(Jedis jedis, String url) {
-        if (url.startsWith("https://danbooru.donmai.us/")) {
-            url += String.format("&login=%s&api_key=%s", System.getenv("DANBOORU_LOGIN"), System.getenv("DANBOORU_API_TOKEN"));
-            String[] proxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
-            String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
-            url = "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+        String domain = url.split("/")[2];
+        if (domain.equals("danbooru.donmai.us")) {
+            url += String.format("&login=%s&api_key=%s",
+                    System.getenv("DANBOORU_LOGIN"),
+                    System.getenv("DANBOORU_API_TOKEN")
+            );
         }
+        url = overrideProxyDomains(url);
 
         if (!Program.isProductionMode()) {
             LOGGER.info("requesting website: {}", url);
         }
 
-        String domain = url.split("/")[2];
         String domainBlockKey = "domain_block:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
@@ -123,6 +124,28 @@ public class WebCache {
             return new HttpResponse()
                     .setCode(500);
         }
+    }
+
+    private String overrideProxyDomains(String url) {
+        String domain = url.split("/")[2];
+        for (ProxyTarget proxyTarget : ProxyTarget.values()) {
+            if (domain.equals(proxyTarget.getDomain())) {
+                String[] rawProxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
+                String[] proxyDomains;
+                if (proxyTarget.allowWithoutProxy()) {
+                    proxyDomains = new String[rawProxyDomains.length + 1];
+                    System.arraycopy(rawProxyDomains, 0, proxyDomains, 0, rawProxyDomains.length);
+                } else {
+                    proxyDomains = rawProxyDomains;
+                }
+                String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
+                if (selectedProxyDomain != null) {
+                    return "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+                }
+                break;
+            }
+        }
+        return url;
     }
 
     public OkHttpClient getClient() {
