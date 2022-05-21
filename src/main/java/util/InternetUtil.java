@@ -1,6 +1,7 @@
 package util;
 
-import com.google.common.net.UrlEscapers;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class InternetUtil {
 
@@ -8,7 +9,7 @@ public class InternetUtil {
     }
 
     public static String escapeForURL(String url) {
-        return UrlEscapers.urlFragmentEscaper().escape(url);
+        return URLEncoder.encode(url, StandardCharsets.UTF_8);
     }
 
     public static boolean urlContainsImage(String url) {

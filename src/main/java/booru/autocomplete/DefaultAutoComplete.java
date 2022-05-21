@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import booru.BooruChoice;
 import core.WebCache;
+import org.apache.commons.text.StringEscapeUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -28,8 +29,8 @@ public class DefaultAutoComplete implements BooruAutoComplete {
         for (int i = 0; i < arrayJson.length(); i++) {
             JSONObject tagJson = arrayJson.getJSONObject(i);
             BooruChoice choice = new BooruChoice()
-                    .setName(tagJson.getString("label"))
-                    .setValue(tagJson.getString("value"));
+                    .setName(StringEscapeUtils.unescapeHtml4(tagJson.getString("label")))
+                    .setValue(StringEscapeUtils.unescapeHtml4(tagJson.getString("value")));
             tags.add(choice);
         }
 

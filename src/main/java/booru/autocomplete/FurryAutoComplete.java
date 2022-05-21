@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import booru.BooruChoice;
 import core.WebCache;
+import org.apache.commons.text.StringEscapeUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -31,7 +32,7 @@ public class FurryAutoComplete implements BooruAutoComplete {
         JSONArray arrayJson = new JSONArray(data);
         for (int i = 0; i < arrayJson.length(); i++) {
             JSONObject tagJson = arrayJson.getJSONObject(i);
-            String name = tagJson.getString("name");
+            String name = StringEscapeUtils.unescapeHtml4(tagJson.getString("name"));
             int postCount = tagJson.getInt("post_count");
             BooruChoice choice = new BooruChoice()
                     .setName(name + " (" + postCount + ")")

@@ -51,7 +51,7 @@ public class WebCache {
             try (Jedis jedis = jedisPool.getResource()) {
                 byte[] keyBytes = key.getBytes();
                 byte[] data = jedis.get(keyBytes);
-                if (data == null) {
+                if (data == null || !Program.isProductionMode()) {
                     httpResponse = getWithoutCache(jedis, url);
                     SetParams setParams = new SetParams();
                     setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);

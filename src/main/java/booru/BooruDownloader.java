@@ -123,7 +123,8 @@ public class BooruDownloader {
             }
         }
 
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeys.toString(), true));
+        String finalSearchKeysString = finalSearchKeys.toString();
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeysString, true));
         if (count == 0) {
             if (!softMode) {
                 return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, explicit, canBeVideo, remaining, true, filters, skippedResults);
@@ -141,7 +142,7 @@ public class BooruDownloader {
         int shift = count >= 19_000 ? 2000 : 0;
         int page = (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
-        return getPictureOnPage(guildId, boardType, finalSearchKeys.toString(), page, animatedOnly, explicit, canBeVideo,
+        return getPictureOnPage(guildId, boardType, finalSearchKeysString, page, animatedOnly, explicit, canBeVideo,
                 filters, skippedResults, visibleSearchKeysList
         );
     }
