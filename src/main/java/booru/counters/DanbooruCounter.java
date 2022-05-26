@@ -1,6 +1,7 @@
 package booru.counters;
 
 import java.time.Duration;
+import core.Program;
 import core.WebCache;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,7 +20,7 @@ public class DanbooruCounter implements Counter {
     @Override
     public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
         try (Jedis jedis = jedisPool.getResource()) {
-            if (jedis.exists(KEY_DANBOORU_BLOCK)) {
+            if (jedis.exists(KEY_DANBOORU_BLOCK) && Program.isProductionMode()) {
                 return 0;
             }
         }

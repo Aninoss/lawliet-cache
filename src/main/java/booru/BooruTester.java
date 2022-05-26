@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import core.Program;
 import core.WebCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,22 +25,24 @@ public class BooruTester {
         this.webCache = webCache;
         this.jedisPool = jedisPool;
 
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
-            try (Jedis jedis = jedisPool.getResource()) {
-                SetParams params = new SetParams();
-                params.ex(Duration.ofMinutes(1).toSeconds());
-                params.nx();
-                String res = jedis.set(KEY_BOORU_TESTER_LOCK, "true", params);
-                if ("OK".equals(res)) {
-                    try {
-                        schedulerTask();
-                    } catch (Throwable e) {
-                        LOGGER.error("Exception in scheduler task", e);
+        if (Program.isProductionMode()) {
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.scheduleAtFixedRate(() -> {
+                try (Jedis jedis = jedisPool.getResource()) {
+                    SetParams params = new SetParams();
+                    params.ex(Duration.ofMinutes(1).toSeconds());
+                    params.nx();
+                    String res = jedis.set(KEY_BOORU_TESTER_LOCK, "true", params);
+                    if ("OK".equals(res)) {
+                        try {
+                            schedulerTask();
+                        } catch (Throwable e) {
+                            LOGGER.error("Exception in scheduler task", e);
+                        }
                     }
                 }
-            }
-        }, 0, 10, TimeUnit.SECONDS);
+            }, 0, 10, TimeUnit.SECONDS);
+        }
     }
 
     private void schedulerTask() {

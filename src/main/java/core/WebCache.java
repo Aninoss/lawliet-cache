@@ -56,9 +56,6 @@ public class WebCache {
                     SetParams setParams = new SetParams();
                     setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
                     jedis.set(keyBytes, SerializeUtil.serialize(httpResponse), setParams);
-                    if (!Program.isProductionMode()) {
-                        LOGGER.info("new cache entry for: {} ({})", url, key);
-                    }
                 } else {
                     httpResponse = (HttpResponse) SerializeUtil.unserialize(data);
                 }
