@@ -224,13 +224,13 @@ public class BooruDownloader {
 
         BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
         if (booruImageMeta != null) {
-            return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), guildId, usedSearchKeys);
+            return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
         } else {
             return null;
         }
     }
 
-    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType, long guildId,
+    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType,
                                         List<String> usedSearchKeys
     ) {
         String imageUrl = image.getURL();
@@ -239,7 +239,7 @@ public class BooruDownloader {
         if (boardType == BoardType.RULE34) {
             try (Jedis jedis = jedisPool.getResource()) {
                 if (contentType.isVideo()) {
-                    if (usesSharding(guildId)) {
+                    if (usesSharding()) {
                         String[] parts = imageUrl.substring(1).split("/");
                         int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
@@ -259,10 +259,8 @@ public class BooruDownloader {
                 .setTags(usedSearchKeys);
     }
 
-    private boolean usesSharding(long guildId) {
-        if (guildId <= 999) {
-            return false;
-        } else if (mediaServerCooldown <= 0) {
+    private boolean usesSharding() {
+        if (mediaServerCooldown <= 0) {
             return true;
         }
 
