@@ -15,9 +15,14 @@ public final class NSFWUtil {
         return str;
     }
 
-    public static boolean tagListAllowed(List<String> tagList, List<String> filters) {
-        return tagList.stream()
-                .noneMatch(tag -> filters.stream().anyMatch(tag::equalsIgnoreCase));
+    public static boolean tagListAllowed(List<String> tagList, List<String> filterTags) {
+        for (String tag : tagList) {
+            String tagLowerCase = tag.toLowerCase();
+            if (filterTags.stream().anyMatch(filterTag -> tagLowerCase.contains(filterTag.toLowerCase()))) {
+                return false;
+            }
+        }
+        return true;
     }
 
 }
