@@ -71,7 +71,6 @@ public class BooruDownloader {
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
                                  boolean explicit, boolean canBeVideo, List<String> filters, List<String> skippedResults,
                                  boolean test) {
-        searchKeys = NSFWUtil.filterPornSearchKey(searchKeys, filters);
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new NoSuchElementException("No such image board");
