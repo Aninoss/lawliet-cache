@@ -40,7 +40,7 @@ public class CheckOwnConnection {
     private void onConnectionError() {
         LOGGER.error("Connection error");
         if (Boolean.parseBoolean(System.getenv("STOP_ON_CONNECTION_ERROR"))) {
-            System.exit(1);
+            System.exit(3);
         }
     }
 

@@ -6,12 +6,17 @@ public final class NSFWUtil {
 
     public static boolean tagListAllowed(List<String> tagList, List<String> filterTags) {
         for (String tag : tagList) {
-            String tagLowerCase = tag.toLowerCase();
-            if (filterTags.stream().anyMatch(filterTag -> tagLowerCase.startsWith(filterTag.toLowerCase()) || tagLowerCase.endsWith(filterTag.toLowerCase()))) {
+            if (filterTags.stream().anyMatch(filterTag -> tagMatchesFilterTag(tag.toLowerCase(), filterTag.toLowerCase()))) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean tagMatchesFilterTag(String tag, String filterTag) {
+        return tag.equals(filterTag) ||
+                tag.startsWith(filterTag + "_") ||
+                tag.endsWith("_" + filterTag);
     }
 
 }

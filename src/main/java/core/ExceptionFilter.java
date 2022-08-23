@@ -26,7 +26,7 @@ public class ExceptionFilter extends Filter<ILoggingEvent> {
         String message = throwableProxyImpl.getThrowable().toString();
         if (message.contains("Broken pipe")) {
             System.err.println("EXIT - Broken pipe");
-            System.exit(1);
+            System.exit(2);
             return FilterReply.NEUTRAL;
         }
 
