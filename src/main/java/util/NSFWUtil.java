@@ -1,22 +1,22 @@
 package util;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class NSFWUtil {
 
     public static boolean tagListAllowed(List<String> tagList, List<String> filterTags) {
+        List<String> processedFilterTags = filterTags.stream()
+                .map(filterTag -> "_" + filterTag.toLowerCase() + "_")
+                .collect(Collectors.toList());
+
         for (String tag : tagList) {
-            if (filterTags.stream().anyMatch(filterTag -> tagMatchesFilterTag(tag.toLowerCase(), filterTag.toLowerCase()))) {
+            String processedTag = "_" + tag.toLowerCase() + "_";
+            if (processedFilterTags.stream().anyMatch(processedTag::contains)) {
                 return false;
             }
         }
         return true;
-    }
-
-    private static boolean tagMatchesFilterTag(String tag, String filterTag) {
-        return tag.equals(filterTag) ||
-                tag.startsWith(filterTag + "_") ||
-                tag.endsWith("_" + filterTag);
     }
 
 }
