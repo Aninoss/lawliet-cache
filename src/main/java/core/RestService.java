@@ -134,6 +134,19 @@ public class RestService {
     }
 
     @POST
+    @Path("/webcache_ext")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public HttpResponse webcacheExt(HttpRequest httpRequest) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            return webCache.request(httpRequest.getMethod(), httpRequest.getUrl(), httpRequest.getBody(), httpRequest.getContentType(), 5);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /webcache_ext", e);
+            throw e;
+        }
+    }
+
+    @POST
     @Path("/cached_proxy/{minutes}")
     @Consumes(MediaType.TEXT_PLAIN)
     public Response cachedProxy(String url, @PathParam("minutes") int minutes) {

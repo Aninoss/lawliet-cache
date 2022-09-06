@@ -21,6 +21,7 @@ public class WebCache {
     private final static Logger LOGGER = LoggerFactory.getLogger(WebCache.class);
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
     public static final int MAX_ERRORS = 20;
+    public static final String METHOD_GET = "GET";
 
     private final JedisPool jedisPool;
     private final LockManager lockManager;
@@ -44,7 +45,17 @@ public class WebCache {
     }
 
     public HttpResponse get(String url, int minutesCached) {
-        String key = "webresponse:" + url.hashCode();
+        return request(METHOD_GET, url, null, null, minutesCached);
+    }
+
+    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached) {
+        String key;
+        if (method.equals(METHOD_GET)) {
+            key = "webresponse:" + url.hashCode();
+        } else {
+            key = "webresponse:" + method + ":" + url.hashCode() + ":" + body.hashCode() + ":" + contentType;
+        }
+
         Object lock = lockManager.get(key);
         HttpResponse httpResponse;
         synchronized (lock) {
@@ -52,7 +63,7 @@ public class WebCache {
                 byte[] keyBytes = key.getBytes();
                 byte[] data = jedis.get(keyBytes);
                 if (data == null || !Program.isProductionMode()) {
-                    httpResponse = getWithoutCache(jedis, url);
+                    httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
                     SetParams setParams = new SetParams();
                     setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
                     jedis.set(keyBytes, SerializeUtil.serialize(httpResponse), setParams);
@@ -67,11 +78,17 @@ public class WebCache {
 
     public HttpResponse getWithoutCache(String url) {
         try (Jedis jedis = jedisPool.getResource()) {
-            return getWithoutCache(jedis, url);
+            return requestWithoutCache(jedis, METHOD_GET, url, null, null);
         }
     }
 
-    private HttpResponse getWithoutCache(Jedis jedis, String url) {
+    public HttpResponse requestWithoutCache(String method, String url, String body, String contentType) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            return requestWithoutCache(jedis, method, url, body, contentType);
+        }
+    }
+
+    private HttpResponse requestWithoutCache(Jedis jedis, String method, String url, String body, String contentType) {
         String domain = url.split("/")[2];
         if (domain.equals("danbooru.donmai.us")) {
             url += String.format("&login=%s&api_key=%s",
@@ -90,12 +107,16 @@ public class WebCache {
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
         if (domainBlockCounter < MAX_ERRORS) {
             try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(9))) {
-                Request request = new Request.Builder()
+                Request.Builder requestBuilder = new Request.Builder()
                         .url(url)
-                        .addHeader("User-Agent", USER_AGENT)
-                        .build();
+                        .addHeader("User-Agent", USER_AGENT);
 
-                try (Response response = client.newCall(request).execute()) {
+                if (!method.equals(METHOD_GET)) {
+                    RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));
+                    requestBuilder.method(method, requestBody);
+                }
+
+                try (Response response = client.newCall(requestBuilder.build()).execute()) {
                     if (domain.equals("e621.net") && response.code() == 503) {
                         jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
                     } else {
