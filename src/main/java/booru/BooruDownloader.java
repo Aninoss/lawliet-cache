@@ -10,10 +10,8 @@ import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
 import net.kodehawa.lib.imageboards.entities.exceptions.QueryFailedException;
 import net.kodehawa.lib.imageboards.entities.exceptions.QueryParseException;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
@@ -41,9 +39,11 @@ public class BooruDownloader {
                 .addInterceptor(chain -> {
                     Request request = chain.request();
                     request = request.newBuilder()
-                            .url(String.format("http://localhost:%s/api/cached_proxy/15", System.getenv("PORT")))
-                            .method("POST", RequestBody.create(request.url().toString(), MediaType.get("text/plain")))
+                            .url(String.format("http://localhost:%s/api/cached_proxy", System.getenv("PORT")))
                             .addHeader("Authorization", System.getenv("AUTH"))
+                            .addHeader("X-Proxy-Url", request.url().toString())
+                            .addHeader("X-Proxy-Minutes", "15")
+                            .get()
                             .build();
                     return chain.proceed(request);
                 })

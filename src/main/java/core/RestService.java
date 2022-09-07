@@ -133,34 +133,22 @@ public class RestService {
         }
     }
 
-    @POST
-    @Path("/webcache_ext")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public HttpResponse webcacheExt(HttpRequest httpRequest) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
-            return webCache.request(httpRequest.getMethod(), httpRequest.getUrl(), httpRequest.getBody(), httpRequest.getContentType(), 5);
-        } catch (Throwable e) {
-            LOGGER.error("Error in /webcache_ext", e);
-            throw e;
-        }
+    @GET
+    @Path("/cached_proxy")
+    public Response cachedProxy(@HeaderParam("X-Proxy-Url") String url,
+                                @HeaderParam("X-Proxy-Minutes") int minutes
+    ) {
+        return requestCachedProxy("GET", url, minutes, null, null);
     }
 
     @POST
-    @Path("/cached_proxy/{minutes}")
-    @Consumes(MediaType.TEXT_PLAIN)
-    public Response cachedProxy(String url, @PathParam("minutes") int minutes) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
-            HttpResponse httpResponse = webCache.get(url, minutes);
-            if (httpResponse.getCode() / 100 == 2) {
-                return Response.ok(httpResponse.getBody()).build();
-            } else {
-                return Response.status(httpResponse.getCode()).build();
-            }
-        } catch (Throwable e) {
-            LOGGER.error("Error in /webcache_raw", e);
-            throw e;
-        }
+    @Path("/cached_proxy")
+    public Response cachedProxy(@HeaderParam("X-Proxy-Url") String url,
+                                @HeaderParam("X-Proxy-Minutes") int minutes,
+                                @HeaderParam("Content-Type") String contentType,
+                                String body
+    ) {
+        return requestCachedProxy("POST", url, minutes, contentType, body);
     }
 
     @POST
@@ -176,6 +164,20 @@ public class RestService {
             );
         } catch (Throwable e) {
             LOGGER.error("Error in /random", e);
+            throw e;
+        }
+    }
+
+    private Response requestCachedProxy(String method, String url, int minutes, String contentType, String body) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+            HttpResponse httpResponse = webCache.request(method, url, body, contentType, minutes);
+            if (httpResponse.getCode() / 100 == 2) {
+                return Response.ok(httpResponse.getBody()).build();
+            } else {
+                return Response.status(httpResponse.getCode()).build();
+            }
+        } catch (Throwable e) {
+            LOGGER.error("Error in /webcache", e);
             throw e;
         }
     }
