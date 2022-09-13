@@ -1,6 +1,6 @@
 package core;
 
-import java.io.InterruptedIOException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -44,6 +44,10 @@ public class WebCache {
                 .build();
     }
 
+    public OkHttpClient getClient() {
+        return client;
+    }
+
     public HttpResponse get(String url, int minutesCached) {
         return request(METHOD_GET, url, null, null, minutesCached);
     }
@@ -53,27 +57,35 @@ public class WebCache {
         if (method.equals(METHOD_GET)) {
             key = "webresponse:" + url.hashCode();
         } else {
-            key = "webresponse:" + method + ":" + url.hashCode() + ":" + body.hashCode() + ":" + contentType;
+            key = "webresponse:" + method + ":" + url.hashCode() + ":" + body.hashCode() + ":" + contentType.hashCode();
         }
 
         Object lock = lockManager.get(key);
-        HttpResponse httpResponse;
         synchronized (lock) {
             try (Jedis jedis = jedisPool.getResource()) {
                 byte[] keyBytes = key.getBytes();
-                byte[] data = jedis.get(keyBytes);
-                if (data == null || !Program.isProductionMode()) {
-                    httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
-                    SetParams setParams = new SetParams();
-                    setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
-                    jedis.set(keyBytes, SerializeUtil.serialize(httpResponse), setParams);
-                } else {
-                    httpResponse = (HttpResponse) SerializeUtil.unserialize(data);
+                byte[] payloadBytes = jedis.get(keyBytes);
+
+                if (payloadBytes != null) {
+                    if (payloadBytes.length > 0) {
+                        return (HttpResponse) SerializeUtil.unserialize(payloadBytes);
+                    } else {
+                        HttpResponse httpResponse = readHttpResponseFromFile(key);
+                        if (httpResponse != null) {
+                            return httpResponse;
+                        }
+                    }
                 }
+
+                HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
+                writeHttpResponseToFile(key, httpResponse);
+
+                SetParams setParams = new SetParams();
+                setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
+                jedis.set(keyBytes, new byte[0], setParams);
+                return httpResponse;
             }
         }
-
-        return httpResponse;
     }
 
     public HttpResponse getWithoutCache(String url) {
@@ -166,8 +178,38 @@ public class WebCache {
         return url;
     }
 
-    public OkHttpClient getClient() {
-        return client;
+    private void writeHttpResponseToFile(String key, HttpResponse httpResponse) {
+        String filePath = System.getenv("WEBCACHE_ROOT_PATH") + "/" + key.replace(":", "_");
+        File file = new File(filePath);
+
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            byte[] payloadBytes = SerializeUtil.serialize(httpResponse);
+            if (payloadBytes != null) {
+                outputStream.write(payloadBytes);
+            } else {
+                LOGGER.error("Payload bytes for file {} are null", filePath);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Could not write cache file {}", filePath, e);
+        }
+    }
+
+    private HttpResponse readHttpResponseFromFile(String key) {
+        String filePath = System.getenv("WEBCACHE_ROOT_PATH") + "/" + key.replace(":", "_");
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            LOGGER.error("Could not find file {}", filePath);
+            return null;
+        }
+
+        try (FileInputStream inputStream = new FileInputStream(file)) {
+            byte[] payloadBytes = inputStream.readAllBytes();
+            return (HttpResponse) SerializeUtil.unserialize(payloadBytes);
+        } catch (IOException e) {
+            LOGGER.error("Could not read cache file {}", filePath, e);
+            return null;
+        }
     }
 
 }

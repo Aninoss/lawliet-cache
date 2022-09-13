@@ -18,18 +18,23 @@ public class SerializeUtil {
             baos = new ByteArrayOutputStream();
             oos = new ObjectOutputStream(baos);
             oos.writeObject(object);
-            byte[] bytes = baos.toByteArray();
-            return bytes;
+            return baos.toByteArray();
         } catch (Exception e) {
-            LOGGER.error("Exception", e);
+            if (!(e instanceof EOFException)) {
+                LOGGER.error("Exception", e);
+            }
         } finally {
             try {
-                oos.close();
+                if (oos != null) {
+                    oos.close();
+                }
             } catch (IOException e) {
                 LOGGER.error("Exception", e);
             }
             try {
-                baos.close();
+                if (baos != null) {
+                    baos.close();
+                }
             } catch (IOException e) {
                 LOGGER.error("Exception", e);
             }
@@ -38,25 +43,28 @@ public class SerializeUtil {
     }
 
     public static Object unserialize(byte[] bytes) {
-
         ByteArrayInputStream bais = null;
         ObjectInputStream ois = null;
         try {
-
             bais = new ByteArrayInputStream(bytes);
             ois = new ObjectInputStream(bais);
             return ois.readObject();
         } catch (Exception e) {
-            LOGGER.error("Exception", e);
+            if (!(e instanceof EOFException)) {
+                LOGGER.error("Exception", e);
+            }
         } finally {
-
             try {
-                ois.close();
+                if (ois != null) {
+                    ois.close();
+                }
             } catch (IOException e) {
                 LOGGER.error("Exception", e);
             }
             try {
-                bais.close();
+                if (bais != null) {
+                    bais.close();
+                }
             } catch (IOException e) {
                 LOGGER.error("Exception", e);
             }
