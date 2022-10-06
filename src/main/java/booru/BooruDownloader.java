@@ -4,6 +4,9 @@ import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import core.ConsistentHash;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
@@ -16,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.params.SetParams;
 import util.NSFWUtil;
 
 public class BooruDownloader {
@@ -29,8 +31,7 @@ public class BooruDownloader {
     private final Random random = new Random();
     private final JedisPool jedisPool;
     private final BooruTester booruTester;
-    private final int mediaServerCooldown;
-    private final int mediaServerMaxShards;
+    private final ConsistentHash<Integer> consistentHash;
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
         this.jedisPool = jedisPool;
@@ -50,9 +51,11 @@ public class BooruDownloader {
                 .build();
         this.webCache = webCache;
         this.booruTester = new BooruTester(webCache, jedisPool);
-        this.mediaServerCooldown = Integer.parseInt(System.getenv("MS_COOLDOWN_MILLIS"));
-        this.mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
+
+        int mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
+        List<Integer> mediaServerIndexes = IntStream.range(0, mediaServerMaxShards).boxed().collect(Collectors.toList());
+        this.consistentHash = new ConsistentHash<>(mediaServerIndexes, 10);
     }
 
     public List<BooruChoice> getTags(String domain, String search) {
@@ -238,11 +241,9 @@ public class BooruDownloader {
         if (boardType == BoardType.RULE34) {
             try (Jedis jedis = jedisPool.getResource()) {
                 if (contentType.isVideo()) {
-                    if (usesSharding()) {
-                        String[] parts = imageUrl.substring(1).split("/");
-                        int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
-                        imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                    }
+                    String[] parts = imageUrl.substring(1).split("/");
+                    int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
+                    imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
                     jedis.incr("rule34_video");
                 }
                 jedis.incr("rule34_total");
@@ -258,24 +259,9 @@ public class BooruDownloader {
                 .setTags(usedSearchKeys);
     }
 
-    private boolean usesSharding() {
-        if (mediaServerCooldown <= 0) {
-            return true;
-        }
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            SetParams setParams = new SetParams();
-            setParams.nx();
-            setParams.px(mediaServerCooldown);
-            if ("OK".equals(jedis.set("ms_cooldown", Instant.now().toString(), setParams))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private int getShard(String dir, String id) {
-        return Math.abs(Objects.hash(dir, id)) % mediaServerMaxShards;
+        String key = dir + "/" + id;
+        return consistentHash.get(key);
     }
 
     private String translateVideoUrlToOwnCDN(String targetDomain, String videoUrl) {
