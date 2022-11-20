@@ -65,6 +65,10 @@ public class BooruTester {
     }
 
     public boolean get(BoardType boardType) {
+        if (!Program.isProductionMode()) {
+            return true;
+        }
+
         try (Jedis jedis = jedisPool.getResource()) {
             String result = jedis.hget(KEY_BOORU_RESULTS, boardType.name());
             if (result != null) {

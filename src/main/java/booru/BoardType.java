@@ -81,6 +81,17 @@ public enum BoardType {
             new DanbooruAutoComplete()
     ),
 
+    GELBOORU(
+            "gelbooru.com",
+            "https://gelbooru.com/index.php?page=post&s=view&id=",
+            100,
+            DefaultBoards.GELBOORU,
+            GelbooruImage.class,
+            new GelbooruCounter(),
+            -1,
+            new GelbooruAutoComplete()
+    ),
+
     E926(
             "e926.net",
             "https://e926.net/posts/",

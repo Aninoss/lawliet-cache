@@ -108,6 +108,9 @@ public class BooruDownloader {
             for (String filter : filters) {
                 finalSearchKeys.append(" -").append(filter);
             }
+            if (explicit) {
+                finalSearchKeys.append(" rating:explicit");
+            }
         }
 
         if (boardType.getMaxTags() >= 0) {
@@ -169,7 +172,8 @@ public class BooruDownloader {
         List<? extends BoardImage> boardImages;
         try {
             try {
-                boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm).blocking();
+                boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm)
+                        .blocking();
             } catch (RuntimeException e) {
                 if (e.getCause() != null) {
                     throw e.getCause();
