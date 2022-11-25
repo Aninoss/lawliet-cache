@@ -242,16 +242,16 @@ public class BooruDownloader {
         String imageUrl = image.getURL();
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
-        if (boardType == BoardType.RULE34) {
-            try (Jedis jedis = jedisPool.getResource()) {
-                if (contentType.isVideo()) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            if (contentType.isVideo()) {
+                if (boardType == BoardType.RULE34) {
                     String[] parts = imageUrl.substring(1).split("/");
                     int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                     imageUrl = translateVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                    jedis.incr("rule34_video");
                 }
-                jedis.incr("rule34_total");
+                jedis.incr(boardType.name().toLowerCase() + "_video");
             }
+            jedis.incr(boardType.name().toLowerCase() + "_total");
         }
 
         return new BooruImage()
