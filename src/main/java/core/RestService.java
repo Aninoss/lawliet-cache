@@ -58,7 +58,7 @@ public class RestService {
                     booruRequest.getDomain(),
                     booruRequest.getSearchTerm(),
                     booruRequest.getAnimatedOnly(),
-                    booruRequest.getExplicit(),
+                    booruRequest.getMustBeExplicit(),
                     booruRequest.getCanBeVideo(),
                     booruRequest.getFilters(),
                     booruRequest.getSkippedResults(),
