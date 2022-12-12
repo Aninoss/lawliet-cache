@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import core.ConsistentHash;
+import core.Program;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
@@ -203,6 +204,7 @@ public class BooruDownloader {
             blockSet = jedis.hgetAll("reports").keySet();
         }
 
+        int[] passingRestrictions = new int[10];
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
             if (fileUrl != null) {
@@ -212,6 +214,18 @@ public class BooruDownloader {
                 boolean notPending = !boardImage.isPending();
                 long created = boardImage.getCreationMillis();
                 boolean blocked = blockSet.contains(fileUrl);
+
+                if (!Program.isProductionMode()) {
+                    if (contentType != null) passingRestrictions[0]++;
+                    if (contentType != null && (!animatedOnly || contentType.isAnimated())) passingRestrictions[1]++;
+                    if (contentType != null && (!contentType.isVideo() || canBeVideo)) passingRestrictions[2]++;
+                    if (score >= 0) passingRestrictions[3]++;
+                    if (NSFWUtil.tagListAllowed(boardImage.getTags(), filters)) passingRestrictions[4]++;
+                    if (!mustBeExplicit || isExplicit) passingRestrictions[5]++;
+                    if (notPending) passingRestrictions[6]++;
+                    if (created <= maxPostDate) passingRestrictions[7]++;
+                    if (!blocked) passingRestrictions[8]++;
+                }
 
                 if (contentType != null &&
                         (!animatedOnly || contentType.isAnimated()) &&
@@ -223,9 +237,14 @@ public class BooruDownloader {
                         created <= maxPostDate &&
                         !blocked
                 ) {
+                    passingRestrictions[9]++;
                     pornImages.add(new BooruImageMeta(fileUrl, score, boardImage, contentType));
                 }
             }
+        }
+
+        if (!Program.isProductionMode()) {
+            LOGGER.info("Passing restrictions: {}", passingRestrictions);
         }
 
         BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
