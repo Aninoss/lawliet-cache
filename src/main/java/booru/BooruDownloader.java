@@ -73,8 +73,8 @@ public class BooruDownloader {
     }
 
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
-                                 boolean mustBeExplicit, boolean canBeVideo, List<String> filters, List<String> skippedResults,
-                                 boolean test) {
+                                 boolean mustBeExplicit, boolean canBeVideo, List<String> filters,
+                                 List<String> strictFilters, List<String> skippedResults, boolean test) {
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new NoSuchElementException("No such image board");
@@ -94,13 +94,14 @@ public class BooruDownloader {
                 }
             }
 
-            return getPicture(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, 2, false, filters, skippedResults);
+            return getPicture(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, 2,
+                    false, filters, strictFilters, skippedResults);
         }
     }
 
     private BooruImage getPicture(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
                                   boolean mustBeExplicit, boolean canBeVideo, int remaining, boolean softMode,
-                                  List<String> filters, List<String> skippedResults
+                                  List<String> filters, List<String> strictFilters, List<String> skippedResults
     ) {
         StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
         List<String> visibleSearchKeysList = List.of(finalSearchKeys.toString().split(" "));
@@ -108,6 +109,9 @@ public class BooruDownloader {
         if (boardType.getMaxTags() < 0) {
             for (String filter : filters) {
                 finalSearchKeys.append(" -").append(filter);
+            }
+            for (String strictFilter : strictFilters) {
+                finalSearchKeys.append(" -").append(strictFilter);
             }
             if (mustBeExplicit) {
                 finalSearchKeys.append(" rating:explicit");
@@ -133,12 +137,12 @@ public class BooruDownloader {
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeysString, true));
         if (count == 0) {
             if (!softMode) {
-                return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, skippedResults);
+                return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, strictFilters, skippedResults);
             } else if (remaining > 0) {
                 if (searchKeys.contains(" ")) {
-                    return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining - 1, false, filters, skippedResults);
+                    return getPicture(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining - 1, false, filters, strictFilters, skippedResults);
                 } else if (searchKeys.contains("_")) {
-                    return getPicture(guildId, boardType, searchKeys.replace("_", " "), animatedOnly, mustBeExplicit, canBeVideo, remaining - 1, false, filters, skippedResults);
+                    return getPicture(guildId, boardType, searchKeys.replace("_", " "), animatedOnly, mustBeExplicit, canBeVideo, remaining - 1, false, filters, strictFilters, skippedResults);
                 }
             }
 
@@ -148,8 +152,8 @@ public class BooruDownloader {
         int shift = count >= 19_000 ? 2000 : 0;
         int page = (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
-        return getPictureOnPage(guildId, boardType, finalSearchKeysString, page, animatedOnly, mustBeExplicit, canBeVideo,
-                filters, skippedResults, visibleSearchKeysList
+        return getPictureOnPage(guildId, boardType, finalSearchKeysString, page, animatedOnly, mustBeExplicit,
+                canBeVideo, filters, strictFilters, skippedResults, visibleSearchKeysList
         );
     }
 
@@ -166,8 +170,9 @@ public class BooruDownloader {
     }
 
     private BooruImage getPictureOnPage(long guildId, BoardType boardType, String searchTerm, int page,
-                                        boolean animatedOnly, boolean mustBeExplicit, boolean canBeVideo, List<String> filters,
-                                        List<String> skippedResults, List<String> usedSearchKeys
+                                        boolean animatedOnly, boolean mustBeExplicit, boolean canBeVideo,
+                                        List<String> filters, List<String> strictFilters, List<String> skippedResults,
+                                        List<String> usedSearchKeys
     ) {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
@@ -220,7 +225,7 @@ public class BooruDownloader {
                     if (contentType != null && (!animatedOnly || contentType.isAnimated())) passingRestrictions[1]++;
                     if (contentType != null && (!contentType.isVideo() || canBeVideo)) passingRestrictions[2]++;
                     if (score >= 0) passingRestrictions[3]++;
-                    if (NSFWUtil.tagListAllowed(boardImage.getTags(), filters)) passingRestrictions[4]++;
+                    if (NSFWUtil.tagListAllowed(boardImage.getTags(), filters, strictFilters)) passingRestrictions[4]++;
                     if (!mustBeExplicit || isExplicit) passingRestrictions[5]++;
                     if (notPending) passingRestrictions[6]++;
                     if (created <= maxPostDate) passingRestrictions[7]++;
@@ -231,7 +236,7 @@ public class BooruDownloader {
                         (!animatedOnly || contentType.isAnimated()) &&
                         (!contentType.isVideo() || canBeVideo) &&
                         score >= 0 &&
-                        NSFWUtil.tagListAllowed(boardImage.getTags(), filters) &&
+                        NSFWUtil.tagListAllowed(boardImage.getTags(), filters, strictFilters) &&
                         (!mustBeExplicit || isExplicit) &&
                         notPending &&
                         created <= maxPostDate &&

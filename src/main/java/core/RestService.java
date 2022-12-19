@@ -2,6 +2,7 @@ package core;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import booru.BooruChoice;
 import booru.BooruDownloader;
@@ -61,6 +62,7 @@ public class RestService {
                     booruRequest.getMustBeExplicit(),
                     booruRequest.getCanBeVideo(),
                     booruRequest.getFilters(),
+                    booruRequest.getStrictFilters() != null ? booruRequest.getStrictFilters() : Collections.emptyList(),
                     booruRequest.getSkippedResults(),
                     booruRequest.getTest()
             );
