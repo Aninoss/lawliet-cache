@@ -20,7 +20,7 @@ public class WebCache {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebCache.class);
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
-    public static final int MAX_ERRORS = 20;
+    public static final int MAX_ERRORS = 10;
     public static final String METHOD_GET = "GET";
 
     private final JedisPool jedisPool;
@@ -132,7 +132,10 @@ public class WebCache {
                     if (domain.equals("e621.net") && response.code() == 503) {
                         jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
                     } else {
-                        jedis.set(domainBlockKey, "0");
+                        long errors = jedis.decr(domainBlockKey);
+                        if (errors < 0) {
+                            jedis.set(domainBlockKey, "0");
+                        }
                     }
                     return new HttpResponse()
                             .setCode(response.code())
@@ -148,7 +151,7 @@ public class WebCache {
                 return new HttpResponse()
                         .setCode(500);
             } finally {
-                jedis.expire(domainBlockKey, Duration.ofMinutes(1).toSeconds());
+                jedis.expire(domainBlockKey, Duration.ofMinutes(5).toSeconds());
             }
         } else {
             return new HttpResponse()
