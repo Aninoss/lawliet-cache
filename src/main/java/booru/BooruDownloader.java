@@ -44,7 +44,7 @@ public class BooruDownloader {
                             .url(String.format("http://localhost:%s/api/cached_proxy", System.getenv("PORT")))
                             .addHeader("Authorization", System.getenv("AUTH"))
                             .addHeader("X-Proxy-Url", request.url().toString())
-                            .addHeader("X-Proxy-Minutes", "15")
+                            .addHeader("X-Proxy-Minutes", "30")
                             .get()
                             .build();
                     return chain.proceed(request);

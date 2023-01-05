@@ -18,7 +18,7 @@ public class DanbooruCounter implements Counter {
         String data;
         try {
             if (withCache) {
-                data = webCache.get(url, 60).getBody();
+                data = webCache.get(url, 1440).getBody();
             } else {
                 data = webCache.getWithoutCache(url).getBody();
             }
