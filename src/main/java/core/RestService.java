@@ -53,7 +53,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public BooruImage booru(BooruRequest booruRequest) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return booruDownloader.getPicture(
                     booruRequest.getGuildId(),
                     booruRequest.getDomain(),
@@ -76,7 +76,7 @@ public class RestService {
     @Path("/booru_autocomplete/{domain}/{search}")
     @Produces(MediaType.APPLICATION_JSON)
     public List<BooruChoice> booruAutoComplete(@PathParam("domain") String domain, @PathParam("search") String search) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return booruDownloader.getTags(domain, search);
         } catch (Throwable e) {
             LOGGER.error("Error in /booru_autocomplete", e);
@@ -90,7 +90,7 @@ public class RestService {
     public RedditPost redditSingle(@PathParam("guild_id") long guildId, @PathParam("nsfw_allowed") boolean nsfwAllowed,
                                    @PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy
     ) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return redditDownloader.retrievePost(guildId, subreddit, orderBy, nsfwAllowed);
         } catch (Throwable e) {
             LOGGER.error("Error in /reddit (single)", e);
@@ -102,7 +102,7 @@ public class RestService {
     @Path("/reddit/bulk/{subreddit}/{order_by}")
     @Produces(MediaType.APPLICATION_JSON)
     public List<RedditPost> redditBulk(@PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return redditDownloader.retrievePostsBulk(subreddit, orderBy);
         } catch (Throwable e) {
             LOGGER.error("Error in /reddit (bulk)", e);
@@ -114,7 +114,7 @@ public class RestService {
     @Path("/twitch/{name}")
     @Produces(MediaType.APPLICATION_JSON)
     public TwitchStream redditBulk(@PathParam("name") String name) throws IOException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return twitchDownloader.retrieveStream(name);
         } catch (Throwable e) {
             LOGGER.error("Error in /twitch", e);
@@ -127,7 +127,7 @@ public class RestService {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public HttpResponse webcache(String url) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return webCache.get(url, 5);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
@@ -158,7 +158,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public Integer randomPicker(RandomPickerRequest randomPickerRequest) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return randomPicker.pick(
                     randomPickerRequest.getTag(),
                     randomPickerRequest.getGuildId(),
@@ -171,7 +171,7 @@ public class RestService {
     }
 
     private Response requestCachedProxy(String method, String url, int minutes, String contentType, String body) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(10))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             HttpResponse httpResponse = webCache.request(method, url, body, contentType, minutes);
             if (httpResponse.getCode() / 100 == 2) {
                 return Response.ok(httpResponse.getBody()).build();

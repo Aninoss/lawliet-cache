@@ -1,6 +1,6 @@
 package booru;
 
-import java.net.SocketTimeoutException;
+import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -187,10 +187,10 @@ public class BooruDownloader {
                     throw e;
                 }
             }
-        } catch (QueryFailedException | QueryParseException | SocketTimeoutException e) {
+        } catch (QueryParseException e) {
             LOGGER.error("Failed to query {}", boardType.getDomain());
             return null;
-        } catch (InterruptedException e) {
+        } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
             //ignore
             return null;
         } catch (Throwable e) {

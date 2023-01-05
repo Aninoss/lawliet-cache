@@ -1,13 +1,15 @@
 package core;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLHandshakeException;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,9 +39,7 @@ public class WebCache {
         this.client = new OkHttpClient.Builder()
                 .connectionPool(connectionPool)
                 .dispatcher(dispatcher)
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .writeTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
+                .callTimeout(10, TimeUnit.SECONDS)
                 .cache(null)
                 .build();
     }
@@ -67,22 +67,22 @@ public class WebCache {
                 byte[] payloadBytes = jedis.get(keyBytes);
 
                 if (payloadBytes != null) {
-                    if (payloadBytes.length > 0) {
-                        return (HttpResponse) SerializeUtil.unserialize(payloadBytes);
-                    } else {
-                        HttpResponse httpResponse = readHttpResponseFromFile(key);
-                        if (httpResponse != null) {
-                            return httpResponse;
-                        }
+                    HttpResponse httpResponse = payloadBytes.length > 0
+                            ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
+                            : readHttpResponseFromFile(key);
+                    if (httpResponse != null && httpResponse.getBody() != null) {
+                        return httpResponse;
                     }
                 }
 
                 HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
-                writeHttpResponseToFile(key, httpResponse);
+                if (httpResponse.getBody() != null) {
+                    writeHttpResponseToFile(key, httpResponse);
+                    SetParams setParams = new SetParams();
+                    setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
+                    jedis.set(keyBytes, new byte[0], setParams);
+                }
 
-                SetParams setParams = new SetParams();
-                setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
-                jedis.set(keyBytes, new byte[0], setParams);
                 return httpResponse;
             }
         }
@@ -103,7 +103,8 @@ public class WebCache {
     private HttpResponse requestWithoutCache(Jedis jedis, String method, String url, String body, String contentType) {
         String domain = url.split("/")[2];
         if (domain.equals("danbooru.donmai.us")) {
-            url += String.format("&login=%s&api_key=%s",
+            url += String.format(
+                    "&login=%s&api_key=%s",
                     System.getenv("DANBOORU_LOGIN"),
                     System.getenv("DANBOORU_API_TOKEN")
             );
@@ -115,48 +116,53 @@ public class WebCache {
         }
 
         String domainBlockKey = "domain_block:" + domain;
+        String domainOverloadKey = "domain_overload:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < MAX_ERRORS) {
-            try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(9))) {
-                Request.Builder requestBuilder = new Request.Builder()
-                        .url(url)
-                        .addHeader("User-Agent", USER_AGENT);
+        if (domainBlockCounter < MAX_ERRORS && checkHostOverload(jedis, domainOverloadKey)) {
+            Request.Builder requestBuilder = new Request.Builder()
+                    .url(url)
+                    .addHeader("User-Agent", USER_AGENT);
 
-                if (!method.equals(METHOD_GET)) {
-                    RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));
-                    requestBuilder.method(method, requestBody);
-                }
+            if (!method.equals(METHOD_GET)) {
+                RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));
+                requestBuilder.method(method, requestBody);
+            }
 
-                try (Response response = client.newCall(requestBuilder.build()).execute()) {
-                    if (domain.equals("e621.net") && response.code() == 503) {
-                        jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
-                    } else {
-                        long errors = jedis.decr(domainBlockKey);
-                        if (errors < 0) {
-                            jedis.set(domainBlockKey, "0");
-                        }
+            try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                if (domain.equals("e621.net") && response.code() == 503) {
+                    jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
+                } else {
+                    long errors = jedis.decr(domainBlockKey);
+                    if (errors < 0) {
+                        jedis.set(domainBlockKey, "0");
                     }
-                    return new HttpResponse()
-                            .setCode(response.code())
-                            .setBody(response.body().string());
                 }
-            } catch (InterruptedIOException | SSLHandshakeException e) {
-                long errors = jedis.incr(domainBlockKey);
-                LOGGER.error("Web cache time out ({}; {} errors)", domain, errors);
                 return new HttpResponse()
-                        .setCode(500);
+                        .setCode(response.code())
+                        .setBody(response.body().string());
             } catch (Throwable e) {
-                LOGGER.error("Web cache connection error ({})", domain);
+                long errors = jedis.incr(domainBlockKey);
+                LOGGER.error("Web cache error ({}; {} errors)", domain, errors);
+                if (errors >= MAX_ERRORS) {
+                    jedis.set(domainOverloadKey, String.valueOf(System.currentTimeMillis()));
+                }
                 return new HttpResponse()
                         .setCode(500);
             } finally {
-                jedis.expire(domainBlockKey, Duration.ofMinutes(5).toSeconds());
+                jedis.expire(domainBlockKey, Duration.ofMinutes(3).toSeconds());
             }
         } else {
             return new HttpResponse()
                     .setCode(500);
         }
+    }
+
+    private boolean checkHostOverload(Jedis jedis, String domainOverloadKey) {
+        String overloadTimeString = jedis.get(domainOverloadKey);
+        long overloadTime = Optional.ofNullable(overloadTimeString).map(Long::parseLong).orElse(0L);
+        double threshold = (double) (System.currentTimeMillis() - overloadTime - Duration.ofMinutes(3).toMillis()) / Duration.ofMinutes(7).toMillis();
+        return random.nextDouble() < threshold;
     }
 
     private String overrideProxyDomains(String url) {
