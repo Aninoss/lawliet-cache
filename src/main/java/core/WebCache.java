@@ -22,7 +22,7 @@ public class WebCache {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WebCache.class);
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
-    public static final int MAX_ERRORS = 10;
+    public static final int MAX_ERRORS = 15;
     public static final String METHOD_GET = "GET";
 
     private final JedisPool jedisPool;
