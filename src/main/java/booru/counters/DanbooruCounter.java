@@ -42,7 +42,7 @@ public class DanbooruCounter implements Counter {
         if (json.has("posts") && !json.isNull("posts")) {
             return json.getInt("posts");
         } else {
-            return 0;
+            return -1;
         }
     }
 

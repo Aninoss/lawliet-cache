@@ -30,7 +30,7 @@ public abstract class SearchCounter implements Counter {
         if (data.contains("count=\"")) {
             return Integer.parseInt(StringUtil.extractGroups(data, "count=\"", "\"")[0]);
         } else {
-            return 0;
+            return -1;
         }
     }
 
