@@ -20,12 +20,11 @@ public abstract class SearchCounter implements Counter {
             }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", domain, e);
-            return 0;
+            return -1;
         }
 
         if (data == null) {
-            LOGGER.error("Error for domain {}: empty data", domain);
-            return 0;
+            return -1;
         }
 
         if (data.contains("count=\"")) {

@@ -20,19 +20,17 @@ public abstract class FurryCounter implements Counter {
             }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", domain, e);
-            return 0;
+            return -1;
         }
 
-        if (data == null || data.isBlank()) {
-            LOGGER.error("Error for domain {}: empty data", domain);
-            return 0;
+        if (data == null) {
+            return -1;
         }
 
         int posts = StringUtil.countMatches(data, "<article id=\"post_");
         String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\">", "</menu></div>");
         if (groups.length == 0) {
-            LOGGER.error("Error for domain {}: empty groups", domain);
-            return 0;
+            return -1;
         }
 
         String paginator = groups[0];

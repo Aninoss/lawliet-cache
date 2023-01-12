@@ -24,11 +24,11 @@ public class DanbooruCounter implements Counter {
             }
         } catch (Throwable e) {
             LOGGER.error("Error for domain {}", url.split("/")[2], e);
-            return 0;
+            return -1;
         }
 
         if (data == null) {
-            return 0;
+            return -1;
         }
 
         JSONObject json;
@@ -36,9 +36,8 @@ public class DanbooruCounter implements Counter {
             json = new JSONObject(data).getJSONObject("counts");
         } catch (JSONException | NullPointerException e) {
             LOGGER.error("Danbooru invalid counter response: {}", data);
-            return 0;
+            return -1;
         }
-
 
         if (json.has("posts") && !json.isNull("posts")) {
             return json.getInt("posts");

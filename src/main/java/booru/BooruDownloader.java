@@ -147,6 +147,8 @@ public class BooruDownloader {
             }
 
             return null;
+        } else if (count < 0) {
+            return null;
         }
 
         int shift = count >= 19_000 ? 2000 : 0;

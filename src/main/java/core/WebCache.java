@@ -70,7 +70,7 @@ public class WebCache {
                     HttpResponse httpResponse = payloadBytes.length > 0
                             ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
                             : readHttpResponseFromFile(key);
-                    if (httpResponse != null && httpResponse.getBody() != null) {
+                    if (httpResponse != null && httpResponse.getBody() != null && Program.isProductionMode()) {
                         return httpResponse;
                     }
                 }
