@@ -3,7 +3,10 @@ package booru;
 import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import core.ConsistentHash;
@@ -59,14 +62,14 @@ public class BooruDownloader {
         this.consistentHash = new ConsistentHash<>(mediaServerIndexes, 10);
     }
 
-    public List<BooruChoice> getTags(String domain, String search) {
+    public List<BooruChoice> getTags(String domain, String search) throws BooruException {
         if (search.equals("+")) {
             search = "";
         }
 
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
-            throw new NoSuchElementException("No such image board");
+            throw new BooruException("No image board for domain " + domain);
         }
 
         return boardType.retrieveAutoComplete(webCache, search);
@@ -74,10 +77,10 @@ public class BooruDownloader {
 
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
                                  boolean mustBeExplicit, boolean canBeVideo, List<String> filters,
-                                 List<String> strictFilters, List<String> skippedResults, boolean test) {
+                                 List<String> strictFilters, List<String> skippedResults, boolean test) throws BooruException {
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
-            throw new NoSuchElementException("No such image board");
+            throw new BooruException("No image board for domain " + domain);
         }
 
         if (test) {
@@ -102,7 +105,7 @@ public class BooruDownloader {
     private BooruImage getPicture(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
                                   boolean mustBeExplicit, boolean canBeVideo, int remaining, boolean softMode,
                                   List<String> filters, List<String> strictFilters, List<String> skippedResults
-    ) {
+    ) throws BooruException {
         StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
         List<String> visibleSearchKeysList = List.of(finalSearchKeys.toString().split(" "));
 
@@ -148,7 +151,7 @@ public class BooruDownloader {
 
             return null;
         } else if (count < 0) {
-            return null;
+            throw new BooruException();
         }
 
         int shift = count >= 19_000 ? 2000 : 0;
@@ -175,7 +178,7 @@ public class BooruDownloader {
                                         boolean animatedOnly, boolean mustBeExplicit, boolean canBeVideo,
                                         List<String> filters, List<String> strictFilters, List<String> skippedResults,
                                         List<String> usedSearchKeys
-    ) {
+    ) throws BooruException {
         ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
         try {
@@ -190,14 +193,11 @@ public class BooruDownloader {
                 }
             }
         } catch (QueryParseException e) {
-            LOGGER.error("Failed to query {}", boardType.getDomain());
-            return null;
+            throw new BooruException("Failed to query " + boardType.getDomain());
         } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
-            //ignore
-            return null;
+            throw new BooruException();
         } catch (Throwable e) {
-            LOGGER.error("Error in imageboard type {}", boardType.getDomain(), e);
-            return null;
+            throw new BooruException("Error in imageboard type " + boardType.getDomain(), e);
         }
 
         if (boardImages.isEmpty()) {

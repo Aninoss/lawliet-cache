@@ -4,10 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import booru.BooruChoice;
-import booru.BooruDownloader;
-import booru.BooruImage;
-import booru.BooruRequest;
+import booru.*;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -52,7 +49,7 @@ public class RestService {
     @Path("/booru")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public BooruImage booru(BooruRequest booruRequest) {
+    public BooruImage booru(BooruRequest booruRequest) throws BooruException {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return booruDownloader.getPicture(
                     booruRequest.getGuildId(),
@@ -67,7 +64,9 @@ public class RestService {
                     booruRequest.getTest()
             );
         } catch (Throwable e) {
-            LOGGER.error("Error in /booru", e);
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /booru", e);
+            }
             throw e;
         }
     }
@@ -75,7 +74,7 @@ public class RestService {
     @GET
     @Path("/booru_autocomplete/{domain}/{search}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<BooruChoice> booruAutoComplete(@PathParam("domain") String domain, @PathParam("search") String search) {
+    public List<BooruChoice> booruAutoComplete(@PathParam("domain") String domain, @PathParam("search") String search) throws BooruException {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return booruDownloader.getTags(domain, search);
         } catch (Throwable e) {
