@@ -130,8 +130,10 @@ public class WebCache {
             }
 
             try (Response response = client.newCall(requestBuilder.build()).execute()) {
-                if (domain.equals("e621.net") && response.code() == 503) {
+                if (response.code() == 503) {
                     jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
+                } else if (response.code() / 100 == 5) {
+                    throw new IOException("Server error");
                 } else {
                     long errors = jedis.decr(domainBlockKey);
                     if (errors < 0) {
@@ -150,7 +152,7 @@ public class WebCache {
                 return new HttpResponse()
                         .setCode(500);
             } finally {
-                jedis.expire(domainBlockKey, Duration.ofMinutes(3).toSeconds());
+                jedis.expire(domainBlockKey, Duration.ofMinutes(1).toSeconds());
             }
         } else {
             return new HttpResponse()
@@ -161,7 +163,7 @@ public class WebCache {
     private boolean checkHostOverload(Jedis jedis, String domainOverloadKey) {
         String overloadTimeString = jedis.get(domainOverloadKey);
         long overloadTime = Optional.ofNullable(overloadTimeString).map(Long::parseLong).orElse(0L);
-        double threshold = (double) (System.currentTimeMillis() - overloadTime - Duration.ofMinutes(3).toMillis()) / Duration.ofMinutes(7).toMillis();
+        double threshold = (double) (System.currentTimeMillis() - overloadTime - Duration.ofMinutes(1).toMillis()) / Duration.ofMinutes(9).toMillis();
         return random.nextDouble() < threshold;
     }
 
