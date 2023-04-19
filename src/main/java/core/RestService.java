@@ -32,7 +32,6 @@ public class RestService {
     private final LockManager lockManager = new LockManager();
     private final WebCache webCache = new WebCache(jedisPool, lockManager);
     private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
-    private final CheckOwnConnection checkOwnConnection = new CheckOwnConnection(webCache.getClient());
 
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
     private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);

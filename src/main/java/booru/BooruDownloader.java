@@ -52,6 +52,7 @@ public class BooruDownloader {
                             .build();
                     return chain.proceed(request);
                 })
+                .cache(null)
                 .build();
         this.webCache = webCache;
         this.booruTester = new BooruTester(webCache, jedisPool);
@@ -126,7 +127,7 @@ public class BooruDownloader {
             visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - 1));
         }
         if (boardType == BoardType.DANBOORU) {
-            finalSearchKeys.append(" -filetype:zip");
+            finalSearchKeys.append(" -ugoira");
         }
         if (!canBeVideo) {
             if (boardType == BoardType.E621 || boardType == BoardType.E926) {
