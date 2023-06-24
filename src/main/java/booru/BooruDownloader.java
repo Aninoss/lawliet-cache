@@ -275,10 +275,14 @@ public class BooruDownloader {
                     String[] parts = imageUrl.split("/");
                     int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                     imageUrl = rule34VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                } else if (boardType == BoardType.DANBOORU && new Random().nextInt(Integer.parseInt(System.getenv("DANBOORU_CHANCE"))) == 0) {
+                } else if (boardType == BoardType.DANBOORU) {
                     String[] parts = imageUrl.split("/");
                     int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                     imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                } else if (boardType == BoardType.REALBOORU) {
+                    String[] parts = imageUrl.split("/");
+                    int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                    imageUrl = realbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
                 }
                 jedis.incr(boardType.name().toLowerCase() + "_video");
             }
@@ -307,6 +311,11 @@ public class BooruDownloader {
     private String danbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl) {
         String[] slashParts = videoUrl.split("/");
         return "https://" + targetDomain + "/media/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0];
+    }
+
+    private String realbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl) {
+        String[] slashParts = videoUrl.split("/");
+        return "https://" + targetDomain + "/media/realbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1];
     }
 
 }
