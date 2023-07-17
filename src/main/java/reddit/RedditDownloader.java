@@ -1,10 +1,5 @@
 package reddit;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import core.HttpResponse;
 import core.WebCache;
 import org.json.JSONArray;
@@ -15,6 +10,12 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.params.SetParams;
 import util.InternetUtil;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class RedditDownloader {
 
@@ -111,7 +112,7 @@ public class RedditDownloader {
         if (after != null) {
             url += "&after=" + after;
         }
-        HttpResponse httpResponse = webCache.get(url, 14);
+        HttpResponse httpResponse = webCache.get(url, 119);
         if (httpResponse.getCode() / 100 != 2) {
             LOGGER.error("Error code {} for subreddit {}", httpResponse.getCode(), subreddit);
             return null;

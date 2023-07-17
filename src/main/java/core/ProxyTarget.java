@@ -2,7 +2,8 @@ package core;
 
 public enum ProxyTarget {
     DANBOORU("danbooru.donmai.us", false),
-    E621("e621.net", true);
+    E621("e621.net", true),
+    REDDIT("reddit.com", true);
 
     private final String domain;
     private final boolean allowWithoutProxy;

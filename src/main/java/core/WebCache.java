@@ -1,5 +1,13 @@
 package core;
 
+import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.params.SetParams;
+import util.SerializeUtil;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,13 +18,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import okhttp3.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.params.SetParams;
-import util.SerializeUtil;
 
 public class WebCache {
 
@@ -168,7 +169,7 @@ public class WebCache {
     }
 
     private String overrideProxyDomains(String url) {
-        String domain = url.split("/")[2];
+        String domain = url.split("/")[2].replace("www.", "");
         for (ProxyTarget proxyTarget : ProxyTarget.values()) {
             if (domain.equals(proxyTarget.getDomain())) {
                 String[] rawProxyDomains = System.getenv("MS_PROXY_HOSTS").split(",");
@@ -181,7 +182,7 @@ public class WebCache {
                 }
                 String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
                 if (selectedProxyDomain != null) {
-                    return "https://" + selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+                    return selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
                 }
                 break;
             }
