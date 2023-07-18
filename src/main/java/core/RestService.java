@@ -1,9 +1,5 @@
 package core;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
 import booru.*;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.*;
@@ -17,6 +13,11 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import twitch.TwitchDownloader;
 import twitch.TwitchStream;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 
 @Path("")
 @Singleton
@@ -87,11 +88,13 @@ public class RestService {
     @Produces(MediaType.APPLICATION_JSON)
     public RedditPost redditSingle(@PathParam("guild_id") long guildId, @PathParam("nsfw_allowed") boolean nsfwAllowed,
                                    @PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy
-    ) {
+    ) throws RedditException {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return redditDownloader.retrievePost(guildId, subreddit, orderBy, nsfwAllowed);
         } catch (Throwable e) {
-            LOGGER.error("Error in /reddit (single)", e);
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /reddit (single)", e);
+            }
             throw e;
         }
     }
@@ -99,11 +102,13 @@ public class RestService {
     @GET
     @Path("/reddit/bulk/{subreddit}/{order_by}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<RedditPost> redditBulk(@PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy) {
+    public List<RedditPost> redditBulk(@PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy) throws RedditException {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
             return redditDownloader.retrievePostsBulk(subreddit, orderBy);
         } catch (Throwable e) {
-            LOGGER.error("Error in /reddit (bulk)", e);
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /reddit (bulk)", e);
+            }
             throw e;
         }
     }

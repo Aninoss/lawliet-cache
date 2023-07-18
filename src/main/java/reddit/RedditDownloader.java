@@ -1,5 +1,6 @@
 package reddit;
 
+import booru.RedditException;
 import core.HttpResponse;
 import core.WebCache;
 import org.json.JSONArray;
@@ -32,7 +33,7 @@ public class RedditDownloader {
         this.jedisPool = jedisPool;
     }
 
-    public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean nsfwAllowed) {
+    public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean nsfwAllowed) throws RedditException {
         int tries = 5;
         RedditPost redditPost;
         do {
@@ -42,7 +43,7 @@ public class RedditDownloader {
         return redditPost;
     }
 
-    public List<RedditPost> retrievePostsBulk(String subreddit, String orderBy) {
+    public List<RedditPost> retrievePostsBulk(String subreddit, String orderBy) throws RedditException {
         JSONArray postArrayJson = retrievePostArray(subreddit, orderBy, 25, null);
         if (postArrayJson == null) {
             return null;
@@ -56,7 +57,7 @@ public class RedditDownloader {
         return postList;
     }
 
-    private RedditPost retrievePostRaw(long guildId, String subreddit, String orderBy, String after, int page) {
+    private RedditPost retrievePostRaw(long guildId, String subreddit, String orderBy, String after, int page) throws RedditException {
         JSONArray postArrayJson = retrievePostArray(subreddit, orderBy, 100, after);
         RedditCache redditCache = new RedditCache(jedisPool, guildId, subreddit, orderBy);
         if (postArrayJson == null) {
@@ -87,7 +88,7 @@ public class RedditDownloader {
         }
     }
 
-    private JSONArray retrievePostArray(String subreddit, String orderBy, int limit, String after) {
+    private JSONArray retrievePostArray(String subreddit, String orderBy, int limit, String after) throws RedditException {
         try (Jedis jedis = jedisPool.getResource()) {
             if (jedis.exists(KEY_REDDIT_BLOCK)) {
                 return null;
@@ -107,7 +108,7 @@ public class RedditDownloader {
         return postArrayJson;
     }
 
-    private JSONObject retrieveRootData(String subreddit, String orderBy, int limit, String after) {
+    private JSONObject retrieveRootData(String subreddit, String orderBy, int limit, String after) throws RedditException {
         String url = "https://www.reddit.com/r/" + subreddit + "/" + orderBy + ".json?raw_json=1&limit=" + limit;
         if (after != null) {
             url += "&after=" + after;
@@ -115,12 +116,16 @@ public class RedditDownloader {
         HttpResponse httpResponse = webCache.get(url, 119);
         if (httpResponse.getCode() / 100 != 2) {
             LOGGER.error("Error code {} for subreddit {}", httpResponse.getCode(), subreddit);
-            return null;
+            if (httpResponse.getCode() == 404 || httpResponse.getCode() == 403) {
+                return null;
+            } else {
+                throw new RedditException();
+            }
         }
 
         String body = httpResponse.getBody();
         if (!body.startsWith("{")) {
-            return null;
+            throw new RedditException("Invalid body for subreddit " + subreddit);
         }
 
         JSONObject root = new JSONObject(body);
@@ -129,7 +134,7 @@ public class RedditDownloader {
                 SetParams params = new SetParams();
                 params.ex(Duration.ofMinutes(TIMEOUT_MIN).toSeconds());
                 jedis.set(KEY_REDDIT_BLOCK, Instant.now().toString(), params);
-                return null;
+                throw new RedditException("Too many requests");
             }
         }
 
