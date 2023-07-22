@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RedditDownloader {
 
@@ -113,9 +114,11 @@ public class RedditDownloader {
         if (after != null) {
             url += "&after=" + after;
         }
-        HttpResponse httpResponse = webCache.get(url, 119);
+
+        AtomicBoolean fromCache = new AtomicBoolean();
+        HttpResponse httpResponse = webCache.get(url, 119, fromCache);
         if (httpResponse.getCode() / 100 != 2) {
-            LOGGER.error("Error code {} for subreddit {}", httpResponse.getCode(), subreddit);
+            LOGGER.error("Error code {} for subreddit {} (from cache: {})", httpResponse.getCode(), subreddit, fromCache.get());
             if (httpResponse.getCode() == 404 || httpResponse.getCode() == 403) {
                 return null;
             } else {

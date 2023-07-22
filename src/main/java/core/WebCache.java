@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WebCache {
 
@@ -50,10 +51,18 @@ public class WebCache {
     }
 
     public HttpResponse get(String url, int minutesCached) {
-        return request(METHOD_GET, url, null, null, minutesCached);
+        return request(METHOD_GET, url, null, null, minutesCached, new AtomicBoolean());
+    }
+
+    public HttpResponse get(String url, int minutesCached, AtomicBoolean fromCache) {
+        return request(METHOD_GET, url, null, null, minutesCached, fromCache);
     }
 
     public HttpResponse request(String method, String url, String body, String contentType, int minutesCached) {
+        return request(method, url, body, contentType, minutesCached, new AtomicBoolean());
+    }
+
+    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached, AtomicBoolean fromCache) {
         String key;
         if (method.equals(METHOD_GET)) {
             key = "webresponse:" + url.hashCode();
@@ -68,6 +77,7 @@ public class WebCache {
                 byte[] payloadBytes = jedis.get(keyBytes);
 
                 if (payloadBytes != null) {
+                    fromCache.set(true);
                     HttpResponse httpResponse = payloadBytes.length > 0
                             ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
                             : readHttpResponseFromFile(key);
@@ -76,6 +86,7 @@ public class WebCache {
                     }
                 }
 
+                fromCache.set(false);
                 HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
                 if (httpResponse.getBody() != null) {
                     writeHttpResponseToFile(key, httpResponse);
