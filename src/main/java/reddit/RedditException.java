@@ -1,4 +1,4 @@
-package booru;
+package reddit;
 
 import java.io.IOException;
 

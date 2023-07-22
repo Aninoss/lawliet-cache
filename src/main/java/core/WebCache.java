@@ -50,19 +50,19 @@ public class WebCache {
         return client;
     }
 
-    public HttpResponse get(String url, int minutesCached) {
-        return request(METHOD_GET, url, null, null, minutesCached, new AtomicBoolean());
+    public HttpResponse get(String url, int minutesCached, HttpHeader... headers) {
+        return request(METHOD_GET, url, null, null, minutesCached, new AtomicBoolean(), headers);
     }
 
-    public HttpResponse get(String url, int minutesCached, AtomicBoolean fromCache) {
-        return request(METHOD_GET, url, null, null, minutesCached, fromCache);
+    public HttpResponse get(String url, int minutesCached, AtomicBoolean fromCache, HttpHeader... headers) {
+        return request(METHOD_GET, url, null, null, minutesCached, fromCache, headers);
     }
 
-    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached) {
-        return request(method, url, body, contentType, minutesCached, new AtomicBoolean());
+    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached, HttpHeader... headers) {
+        return request(method, url, body, contentType, minutesCached, new AtomicBoolean(), headers);
     }
 
-    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached, AtomicBoolean fromCache) {
+    public HttpResponse request(String method, String url, String body, String contentType, int minutesCached, AtomicBoolean fromCache, HttpHeader... headers) {
         String key;
         if (method.equals(METHOD_GET)) {
             key = "webresponse:" + url.hashCode();
@@ -87,7 +87,7 @@ public class WebCache {
                 }
 
                 fromCache.set(false);
-                HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType);
+                HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
                 if (httpResponse.getBody() != null) {
                     writeHttpResponseToFile(key, httpResponse);
                     SetParams setParams = new SetParams();
@@ -100,19 +100,19 @@ public class WebCache {
         }
     }
 
-    public HttpResponse getWithoutCache(String url) {
+    public HttpResponse getWithoutCache(String url, HttpHeader... headers) {
         try (Jedis jedis = jedisPool.getResource()) {
-            return requestWithoutCache(jedis, METHOD_GET, url, null, null);
+            return requestWithoutCache(jedis, METHOD_GET, url, null, null, headers);
         }
     }
 
-    public HttpResponse requestWithoutCache(String method, String url, String body, String contentType) {
+    public HttpResponse requestWithoutCache(String method, String url, String body, String contentType, HttpHeader... headers) {
         try (Jedis jedis = jedisPool.getResource()) {
-            return requestWithoutCache(jedis, method, url, body, contentType);
+            return requestWithoutCache(jedis, method, url, body, contentType, headers);
         }
     }
 
-    private HttpResponse requestWithoutCache(Jedis jedis, String method, String url, String body, String contentType) {
+    private HttpResponse requestWithoutCache(Jedis jedis, String method, String url, String body, String contentType, HttpHeader... headers) {
         String domain = url.split("/")[2];
         if (domain.equals("danbooru.donmai.us")) {
             url += String.format(
@@ -135,6 +135,10 @@ public class WebCache {
             Request.Builder requestBuilder = new Request.Builder()
                     .url(url)
                     .addHeader("User-Agent", USER_AGENT);
+
+            for (HttpHeader header : headers) {
+                requestBuilder = requestBuilder.header(header.getName(), header.getValue());
+            }
 
             if (!method.equals(METHOD_GET)) {
                 RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));

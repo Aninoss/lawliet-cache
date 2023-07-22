@@ -1,6 +1,5 @@
 package reddit;
 
-import booru.RedditException;
 import core.HttpResponse;
 import core.WebCache;
 import org.json.JSONArray;

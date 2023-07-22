@@ -7,7 +7,12 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pixiv.PixivDownloader;
+import pixiv.PixivException;
+import pixiv.PixivImage;
+import pixiv.PixivRequest;
 import reddit.RedditDownloader;
+import reddit.RedditException;
 import reddit.RedditPost;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -37,6 +42,7 @@ public class RestService {
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
     private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);
     private final TwitchDownloader twitchDownloader = new TwitchDownloader(webCache, jedisPool);
+    private final PixivDownloader pixivDownloader = new PixivDownloader(webCache, jedisPool);
 
     @GET
     @Path("/ping")
@@ -108,6 +114,46 @@ public class RestService {
         } catch (Throwable e) {
             if (e.getMessage() != null) {
                 LOGGER.error("Error in /reddit (bulk)", e);
+            }
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/pixiv_single")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public PixivImage pixivSingle(PixivRequest pixivRequest) throws PixivException {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
+            return pixivDownloader.retrieveImage(
+                    pixivRequest.getGuildId(),
+                    pixivRequest.getWord(),
+                    pixivRequest.isNsfwAllowed(),
+                    pixivRequest.getFilters(),
+                    pixivRequest.getStrictFilters()
+            );
+        } catch (Throwable e) {
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /pixiv_single", e);
+            }
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/pixiv_bulk")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<PixivImage> pixivBulk(PixivRequest pixivRequest) throws PixivException {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
+            return pixivDownloader.retrieveImagesBulk(
+                    pixivRequest.getWord(),
+                    pixivRequest.getFilters(),
+                    pixivRequest.getStrictFilters()
+            );
+        } catch (Throwable e) {
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /pixiv_bulk", e);
             }
             throw e;
         }

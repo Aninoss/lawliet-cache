@@ -1,14 +1,5 @@
 package booru;
 
-import java.io.InterruptedIOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import core.ConsistentHash;
 import core.Program;
 import core.WebCache;
@@ -24,6 +15,16 @@ import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.NSFWUtil;
+
+import java.io.InterruptedIOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class BooruDownloader {
 
