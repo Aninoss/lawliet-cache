@@ -26,6 +26,7 @@ public class WebCache {
     public static final String USER_AGENT = "Lawliet Discord Bot made by Aninoss#7220";
     public static final int MAX_ERRORS = 15;
     public static final String METHOD_GET = "GET";
+    public static final String PROXY_COUNTER_KEY = "proxy_counter:";
 
     private final JedisPool jedisPool;
     private final LockManager lockManager;
@@ -121,7 +122,7 @@ public class WebCache {
                     System.getenv("DANBOORU_API_TOKEN")
             );
         }
-        url = overrideProxyDomains(url);
+        url = overrideProxyDomains(url, jedis);
 
         if (!Program.isProductionMode()) {
             LOGGER.info("requesting website: {}", url);
@@ -183,12 +184,19 @@ public class WebCache {
         return random.nextDouble() < threshold;
     }
 
-    private String overrideProxyDomains(String url) {
+    private String overrideProxyDomains(String url, Jedis jedis) {
         String domain = url.split("/")[2].replace("www.", "");
+        String counterKey = PROXY_COUNTER_KEY + domain;
+
+        long counter = jedis.incr(counterKey);
+        if (counter > 0 && (counter % 2520 == 0)) {
+            jedis.decrBy(counterKey, counter);
+        }
+
         for (ProxyTarget proxyTarget : ProxyTarget.values()) {
             if (domain.equals(proxyTarget.getDomain())) {
                 String[] proxyDomains = System.getenv("MS_PROXY_HOSTS_" + proxyTarget.name()).split(",");
-                String selectedProxyDomain = proxyDomains[random.nextInt(proxyDomains.length)];
+                String selectedProxyDomain = proxyDomains[(int) (counter % proxyDomains.length)];
                 if (!selectedProxyDomain.equals("null")) {
                     return selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
                 }
