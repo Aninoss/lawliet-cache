@@ -24,7 +24,7 @@ public class CustomApiRequestSender {
 
     public <T> T send(@NonNull String url, @NonNull Class<T> respType) throws APIException, IOException, AuthException {
         HttpHeader authHeader = new HttpHeader("Authorization", "Bearer " + tokenProvider.getAccessToken());
-        HttpResponse httpResponse = webCache.get(url, 30, authHeader);
+        HttpResponse httpResponse = webCache.get(url, 29, authHeader);
 
         if (httpResponse.getCode() / 100 == 2) {
             if (respType == Void.class) {
