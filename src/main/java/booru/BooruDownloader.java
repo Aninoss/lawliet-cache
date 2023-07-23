@@ -29,6 +29,7 @@ import java.util.stream.IntStream;
 public class BooruDownloader {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
+    public static final String REPORTS_KEY = "reports";
 
     private final BooruFilter booruFilter;
     private final OkHttpClient client;
@@ -210,7 +211,7 @@ public class BooruDownloader {
         long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
         Set<String> blockSet;
         try (Jedis jedis = jedisPool.getResource()) {
-            blockSet = jedis.hgetAll("reports").keySet();
+            blockSet = jedis.hgetAll(REPORTS_KEY).keySet();
         }
 
         int[] passingRestrictions = new int[10];

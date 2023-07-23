@@ -10,7 +10,7 @@ public class PixivImage {
     private String author;
     private String authorUrl;
     private String url;
-    private String image;
+    private String imageUrl;
     private int views;
     private int bookmarks;
     private boolean nsfw;
@@ -70,12 +70,12 @@ public class PixivImage {
         return this;
     }
 
-    public String getImage() {
-        return image;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public PixivImage setImage(String image) {
-        this.image = image;
+    public PixivImage setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
         return this;
     }
 
