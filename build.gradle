@@ -30,7 +30,7 @@ dependencies {
     implementation 'com.github.Aninoss:imageboard-api:9f0d594ce4'
     implementation 'commons-io:commons-io:20030203.000550'
     implementation 'org.apache.commons:commons-text:1.9'
-    implementation 'com.github.hanshsieh:pixivj:1.2.3'
+    implementation 'com.github.Aninoss:pixivj:d96712f1af'
 
     implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.12.5'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.12.5'

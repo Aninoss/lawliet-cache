@@ -44,20 +44,21 @@ public class PixivDownloader {
     }
 
     public List<PixivImage> retrieveImagesBulk(String word, List<String> filters, List<String> strictFilters) throws PixivException {
-        List<CustomIllustration> illusts = retrieveIllusts(word, 0, filters, strictFilters);
-        if (illusts.isEmpty()) {
+        List<Illustration> illustrations = retrieveIllustrations(word, 0);
+        if (illustrations.isEmpty()) {
             return null;
         }
 
-        return illusts.stream()
+        return illustrations.stream()
+                .filter(illust -> filterIllustration(illust, filters, strictFilters))
                 .map(this::extractImage)
                 .collect(Collectors.toList());
     }
 
     private PixivImage retrieveImageRaw(long guildId, String word, List<String> filters, List<String> strictFilters, int page) throws PixivException {
-        List<CustomIllustration> illusts = retrieveIllusts(word, page, filters, strictFilters);
+        List<Illustration> illustrations = retrieveIllustrations(word, page);
         PixivCache pixivCache = new PixivCache(jedisPool, guildId, word);
-        if (illusts.isEmpty()) {
+        if (illustrations.isEmpty()) {
             if (page > 0) {
                 pixivCache.removeFirst();
                 return retrieveImageRaw(guildId, word, filters, strictFilters, 0);
@@ -66,8 +67,11 @@ public class PixivDownloader {
             }
         }
 
-        List<CustomIllustration> filteredIllusts = pixivCache.filter(illusts);
-        if (filteredIllusts.isEmpty()) {
+        List<Illustration> filteredIllustrations = pixivCache.filter(illustrations).stream()
+                .filter(illust -> filterIllustration(illust, filters, strictFilters))
+                .collect(Collectors.toList());
+
+        if (filteredIllustrations.isEmpty()) {
             if (page < MAX_PAGE) {
                 return retrieveImageRaw(guildId, word, filters, strictFilters, page + 1);
             } else {
@@ -75,7 +79,7 @@ public class PixivDownloader {
                 return retrieveImageRaw(guildId, word, filters, strictFilters, 0);
             }
         } else {
-            PixivImage pixivImage = extractImage(filteredIllusts.get(0));
+            PixivImage pixivImage = extractImage(filteredIllustrations.get(0));
             pixivCache.add(pixivImage.getId());
             return pixivImage;
         }
@@ -107,7 +111,7 @@ public class PixivDownloader {
         this.customPixivApiClient = new CustomPixivApiClient(tokenRefresher, webCache);
     }
 
-    private List<CustomIllustration> retrieveIllusts(String word, int page, List<String> filters, List<String> strictFilters) throws PixivException {
+    private List<Illustration> retrieveIllustrations(String word, int page) throws PixivException {
         apiLogin();
 
         SearchedIllustsFilter searchedIllustsFilter = new SearchedIllustsFilter();
@@ -116,18 +120,20 @@ public class PixivDownloader {
         searchedIllustsFilter.setMergePlainKeywordResults(true);
         searchedIllustsFilter.setOffset(page * 30);
 
-        //TODO: skip reported images
         try {
-            return customPixivApiClient.searchIllusts(searchedIllustsFilter).getIllusts().stream()
-                    .filter(illustration -> NSFWUtil.tagListAllowed(extractTags(illustration), filters, strictFilters) &&
-                            illustration.getType() == IllustType.ILLUST)
-                    .collect(Collectors.toList());
+            return customPixivApiClient.searchIllusts(searchedIllustsFilter).getIllusts();
         } catch (com.github.hanshsieh.pixivj.exception.PixivException | IOException e) {
             throw new PixivException("Pixiv retrieval exception", e);
         }
     }
 
-    private PixivImage extractImage(CustomIllustration illustration) {
+    private boolean filterIllustration(Illustration illustration, List<String> filters, List<String> strictFilters) {
+        //TODO: skip reported images
+        return NSFWUtil.tagListAllowed(extractTags(illustration), filters, strictFilters) &&
+                illustration.getType() == IllustType.ILLUST;
+    }
+
+    private PixivImage extractImage(Illustration illustration) {
         String imageUrl = illustration.getMetaSinglePage().getOriginalImageUrl() != null
                 ? illustration.getMetaSinglePage().getOriginalImageUrl()
                 : illustration.getMetaPages().get(0).getImageUrls().getOriginal();
@@ -146,7 +152,7 @@ public class PixivDownloader {
                 .setInstant(illustration.getCreateDate().toInstant());
     }
 
-    private List<String> extractTags(CustomIllustration illustration) {
+    private List<String> extractTags(Illustration illustration) {
         List<String> tags = new ArrayList<>();
         for (Tag tag : illustration.getTags()) {
             if (tag.getName() != null) {

@@ -1,6 +1,7 @@
 package pixiv;
 
 import com.github.hanshsieh.pixivj.exception.PixivException;
+import com.github.hanshsieh.pixivj.model.SearchedIllusts;
 import com.github.hanshsieh.pixivj.model.SearchedIllustsFilter;
 import com.github.hanshsieh.pixivj.token.TokenProvider;
 import com.github.hanshsieh.pixivj.util.QueryParamConverter;
@@ -33,9 +34,9 @@ public class CustomPixivApiClient {
      * @throws IOException    IOException Error
      */
     @NonNull
-    public CustomSearchedIllusts searchIllusts(@NonNull SearchedIllustsFilter filter)
+    public SearchedIllusts searchIllusts(@NonNull SearchedIllustsFilter filter)
             throws PixivException, IOException {
-        return sendGetRequest("v1/search/illust", filter, CustomSearchedIllusts.class);
+        return sendGetRequest("v1/search/illust", filter, SearchedIllusts.class);
     }
 
     /**

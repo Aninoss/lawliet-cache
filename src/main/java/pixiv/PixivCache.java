@@ -1,5 +1,6 @@
 package pixiv;
 
+import com.github.hanshsieh.pixivj.model.Illustration;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -20,11 +21,11 @@ public class PixivCache {
         this.word = word.toLowerCase();
     }
 
-    public List<CustomIllustration> filter(List<CustomIllustration> illusts) {
+    public List<Illustration> filter(List<Illustration> illusts) {
         try (Jedis jedis = jedisPool.getResource()) {
-            List<CustomIllustration> newIllusts = new ArrayList<>();
+            List<Illustration> newIllusts = new ArrayList<>();
             HashSet<String> usedIds = new HashSet<>(jedis.lrange(getKey(), 0, -1));
-            for (CustomIllustration illust : illusts) {
+            for (Illustration illust : illusts) {
                 String id = String.valueOf(illust.getId());
                 if (!usedIds.contains(id)) {
                     newIllusts.add(illust);
