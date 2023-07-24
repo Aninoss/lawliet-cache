@@ -4,17 +4,22 @@ import com.github.hanshsieh.pixivj.exception.AuthException;
 import com.github.hanshsieh.pixivj.model.*;
 import com.github.hanshsieh.pixivj.oauth.PixivOAuthClient;
 import com.github.hanshsieh.pixivj.token.ThreadedTokenRefresher;
+import core.HttpHeader;
 import core.WebCache;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.NSFWUtil;
 import util.StringUtil;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static booru.BooruDownloader.REPORTS_KEY;
@@ -32,10 +37,57 @@ public class PixivDownloader {
         this.webCache = webCache;
     }
 
+    public List<PixivChoice> getTags(String search) {
+        HttpHeader refererHeader = new HttpHeader("Referer", "https://www.pixiv.net/en/");
+        ArrayList<PixivChoice> tags = new ArrayList<>();
+
+        if (search.equals("+")) {
+            String url = "https://www.pixiv.net/ajax/search/suggestion?mode=all&lang=en&version=4cc435e5e04b2ed7bcf8f63d7282b497cc6e700b";
+            String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes(), refererHeader).getBody();
+
+            JSONObject rootJson = new JSONObject(data).getJSONObject("body");
+            JSONArray tagsJson = rootJson.getJSONObject("popularTags").getJSONArray("illust");
+            JSONObject translationsJson = rootJson.getJSONObject("tagTranslation");
+
+            for (int i = 0; i < Math.min(10, tagsJson.length()); i++) {
+                String tag = tagsJson.getJSONObject(i).getString("tag");
+                String translatedTag = null;
+                if (translationsJson.has(tag) &&
+                        translationsJson.getJSONObject(tag).has("en") &&
+                        !translationsJson.getJSONObject(tag).getString("en").isBlank()
+                ) {
+                    translatedTag = translationsJson.getJSONObject(tag).getString("en");
+                }
+
+                PixivChoice choice = new PixivChoice()
+                        .setTag(tag)
+                        .setTranslatedTag(translatedTag);
+                tags.add(choice);
+            }
+        } else {
+            String url = "https://www.pixiv.net/rpc/cps.php?keyword=" + URLEncoder.encode(search, StandardCharsets.UTF_8) + "&lang=en&version=4cc435e5e04b2ed7bcf8f63d7282b497cc6e700b";
+            String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes(), refererHeader).getBody();
+
+            JSONArray candidatesJson = new JSONObject(data).getJSONArray("candidates");
+            for (int i = 0; i < Math.min(10, candidatesJson.length()); i++) {
+                JSONObject candidateJson = candidatesJson.getJSONObject(i);
+                String tag = candidateJson.getString("tag_name");
+                String translatedTag = candidateJson.has("tag_translation") ? candidateJson.getString("tag_translation") : null;
+
+                PixivChoice choice = new PixivChoice()
+                        .setTag(tag)
+                        .setTranslatedTag(translatedTag);
+                tags.add(choice);
+            }
+        }
+
+        return Collections.unmodifiableList(tags);
+    }
+
     public PixivImage retrieveImage(long guildId, String word, boolean nsfwAllowed, List<String> filters,
                                     List<String> strictFilters) throws PixivException {
         if (!nsfwAllowed) {
-            word = word + " -r-18";
+            word += " -R-18";
         }
 
         Set<String> blockSet;
@@ -131,7 +183,7 @@ public class PixivDownloader {
         apiLogin();
 
         SearchedIllustsFilter searchedIllustsFilter = new SearchedIllustsFilter();
-        searchedIllustsFilter.setWord(word);
+        searchedIllustsFilter.setWord(word + " -shota -loli -R-18G");
         searchedIllustsFilter.setIncludeTranslatedTagResults(true);
         searchedIllustsFilter.setMergePlainKeywordResults(true);
         searchedIllustsFilter.setOffset(page * 30);
@@ -152,9 +204,14 @@ public class PixivDownloader {
     }
 
     private PixivImage extractPixivImage(Illustration illustration) {
+        String imageNumberString = "";
+        if (!illustration.getMetaPages().isEmpty()) {
+            imageNumberString = "【" + illustration.getMetaPages().size() + "】";
+        }
+
         return new PixivImage()
                 .setId(String.valueOf(illustration.getId()))
-                .setTitle(illustration.getTitle())
+                .setTitle(illustration.getTitle() + imageNumberString)
                 .setDescription(illustration.getCaption())
                 .setAuthor(illustration.getUser().getName())
                 .setAuthorUrl("https://www.pixiv.net/en/users/" + illustration.getUser().getId())
@@ -162,7 +219,7 @@ public class PixivDownloader {
                 .setImageUrl(extractImageUrl(illustration))
                 .setViews(illustration.getTotalView())
                 .setBookmarks(illustration.getTotalBookmarks())
-                .setNsfw(illustration.getTags().stream().anyMatch(tag -> tag.getName().equals("R-18")))
+                .setNsfw(illustration.getSanityLevel() >= 6)
                 .setInstant(illustration.getCreateDate().toInstant());
     }
 
@@ -175,20 +232,27 @@ public class PixivDownloader {
     private String extractImageProxyUrl(Illustration illustration) {
         String imageUrl = extractImageUrl(illustration);
         String extension = imageUrl.substring(imageUrl.lastIndexOf("."));
-        return "https://lawlietbot.xyz/cdn/pixiv/" + illustration.getId() + extension;
+        return "https://media-cdn.lawlietbot.xyz/pixiv/" + illustration.getId() + extension;
     }
 
     private List<String> extractTags(Illustration illustration) {
-        List<String> tags = new ArrayList<>();
+        HashSet<String> tags = new HashSet<>();
+        Consumer<String> addTag = tag -> {
+            tags.add(tag.toLowerCase());
+            tags.add(tag.toLowerCase().replaceAll("\\p{Punct}| ", "_").replace("__", "_"));
+            tags.add(StringUtil.camelToSnake(tag));
+            tags.add(StringUtil.camelToSnake(tag).replaceAll("\\p{Punct}| ", "_").replace("__", "_"));
+        };
+
         for (Tag tag : illustration.getTags()) {
             if (tag.getName() != null) {
-                tags.add(StringUtil.camelToSnake(tag.getName()));
+                addTag.accept(tag.getName());
             }
             if (tag.getTranslatedName() != null) {
-                tags.add(StringUtil.camelToSnake(tag.getTranslatedName()));
+                addTag.accept(tag.getTranslatedName());
             }
         }
-        return tags;
+        return new ArrayList<>(tags);
     }
 
 }

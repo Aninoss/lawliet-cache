@@ -21,14 +21,14 @@ public class PixivCache {
         this.word = word.toLowerCase();
     }
 
-    public List<Illustration> filter(List<Illustration> illusts) {
+    public List<Illustration> filter(List<Illustration> illustrations) {
         try (Jedis jedis = jedisPool.getResource()) {
             List<Illustration> newIllusts = new ArrayList<>();
             HashSet<String> usedIds = new HashSet<>(jedis.lrange(getKey(), 0, -1));
-            for (Illustration illust : illusts) {
-                String id = String.valueOf(illust.getId());
+            for (Illustration illustration : illustrations) {
+                String id = String.valueOf(illustration.getId());
                 if (!usedIds.contains(id)) {
-                    newIllusts.add(illust);
+                    newIllusts.add(illustration);
                 }
             }
             return newIllusts;

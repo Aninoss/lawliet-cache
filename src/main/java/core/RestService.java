@@ -7,10 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import pixiv.PixivDownloader;
-import pixiv.PixivException;
-import pixiv.PixivImage;
-import pixiv.PixivRequest;
+import pixiv.*;
 import reddit.RedditDownloader;
 import reddit.RedditException;
 import reddit.RedditPost;
@@ -155,6 +152,18 @@ public class RestService {
             if (e.getMessage() != null) {
                 LOGGER.error("Error in /pixiv_bulk", e);
             }
+            throw e;
+        }
+    }
+
+    @GET
+    @Path("/pixiv_autocomplete/{search}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<PixivChoice> pixivAutoComplete(@PathParam("search") String search) throws BooruException {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofSeconds(30))) {
+            return pixivDownloader.getTags(search);
+        } catch (Throwable e) {
+            LOGGER.error("Error in /pixiv_autocomplete", e);
             throw e;
         }
     }
