@@ -66,6 +66,11 @@ public class BooruDownloader {
     }
 
     public List<BooruChoice> getTags(String domain, String search) throws BooruException {
+        boolean negativeTag = search.startsWith("-");
+        if (negativeTag) {
+            search = search.substring(1);
+        }
+
         if (search.equals("+")) {
             search = "";
         }
@@ -75,7 +80,17 @@ public class BooruDownloader {
             throw new BooruException("No image board for domain " + domain);
         }
 
-        return boardType.retrieveAutoComplete(webCache, search);
+        return boardType.retrieveAutoComplete(webCache, search).stream()
+                .map(choice -> {
+                    if (negativeTag) {
+                        return new BooruChoice()
+                                .setName("-" + choice.getName())
+                                .setValue("-" + choice.getValue());
+                    } else {
+                        return choice;
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
