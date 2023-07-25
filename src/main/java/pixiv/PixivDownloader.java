@@ -116,7 +116,10 @@ public class PixivDownloader {
         int tries = 5;
         PixivImage pixivImage;
         do {
-            pixivImage = retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0);
+            pixivImage = retrieveImageRaw(guildId, word + " users入り", filters, strictFilters, blockSet, 0);
+            if (pixivImage == null) {
+                pixivImage = retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0);
+            }
         } while (--tries > 0 && !nsfwAllowed && (pixivImage != null && pixivImage.isNsfw()));
 
         return pixivImage;
