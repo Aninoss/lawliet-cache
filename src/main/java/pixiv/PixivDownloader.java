@@ -116,9 +116,9 @@ public class PixivDownloader {
         int tries = 5;
         PixivImage pixivImage;
         do {
-            pixivImage = retrieveImageRaw(guildId, word + " users入り", filters, strictFilters, blockSet, 0);
+            pixivImage = retrieveImageRaw(guildId, word + " users入り", filters, strictFilters, blockSet, 0, true);
             if (pixivImage == null) {
-                pixivImage = retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0);
+                pixivImage = retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0, false);
             }
         } while (--tries > 0 && !nsfwAllowed && (pixivImage != null && pixivImage.isNsfw()));
 
@@ -143,14 +143,14 @@ public class PixivDownloader {
     }
 
     private PixivImage retrieveImageRaw(long guildId, String word, List<String> filters, List<String> strictFilters,
-                                        Set<String> blockSet, int page
+                                        Set<String> blockSet, int page, boolean popular
     ) throws PixivException {
         List<Illustration> illustrations = retrieveIllustrations(word, page);
         PixivCache pixivCache = new PixivCache(jedisPool, guildId, word);
         if (illustrations.isEmpty()) {
-            if (page > 0) {
+            if (page > 0 && !popular) {
                 pixivCache.removeFirst();
-                return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0);
+                return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0, popular);
             } else {
                 return null;
             }
@@ -162,10 +162,14 @@ public class PixivDownloader {
 
         if (filteredIllustrations.isEmpty()) {
             if (page < MAX_PAGE) {
-                return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, page + 1);
+                return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, page + 1, popular);
             } else {
-                pixivCache.removeFirst();
-                return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0);
+                if (popular) {
+                    return null;
+                } else {
+                    pixivCache.removeFirst();
+                    return retrieveImageRaw(guildId, word, filters, strictFilters, blockSet, 0, popular);
+                }
             }
         } else {
             PixivImage pixivImage = extractPixivImage(filteredIllustrations.get(0));
