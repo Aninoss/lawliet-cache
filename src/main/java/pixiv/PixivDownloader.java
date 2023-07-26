@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import util.NSFWUtil;
+import util.StringUtil;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -208,7 +209,7 @@ public class PixivDownloader {
         apiLogin();
 
         SearchedIllustsFilter searchedIllustsFilter = new SearchedIllustsFilter();
-        searchedIllustsFilter.setWord(word + " -shota -loli -R-18G");
+        searchedIllustsFilter.setWord(word + " -ロリ -ショタ -R-18G");
         searchedIllustsFilter.setIncludeTranslatedTagResults(true);
         searchedIllustsFilter.setMergePlainKeywordResults(true);
         searchedIllustsFilter.setOffset(page * 30);
@@ -229,7 +230,7 @@ public class PixivDownloader {
         return illustration.getType() != IllustType.UGOIRA &&
                 (illustration.getIllustAiType() == 1 || allowAi) &&
                 extractImageProxyUrls(illustration).stream().noneMatch(blockSet::contains) &&
-                NSFWUtil.tagListAllowed(extractTags(illustration), filters, strictFilters);
+                !NSFWUtil.containsFilterTags(extractTags(illustration), filters, strictFilters);
     }
 
     private PixivImage extractPixivImage(Illustration illustration) {
@@ -272,11 +273,13 @@ public class PixivDownloader {
     private List<String> extractTags(Illustration illustration) {
         HashSet<String> tags = new HashSet<>();
         for (Tag tag : illustration.getTags()) {
-            if (tag.getName() != null) {
-                tags.add(tag.getName());
+            if (tag.getName() != null && !tag.getName().isBlank()) {
+                tags.add(tag.getName().toLowerCase());
+                tags.add(StringUtil.camelToSnake(tag.getName()));
             }
             if (tag.getTranslatedName() != null && !tag.getTranslatedName().isBlank()) {
-                tags.add(tag.getTranslatedName());
+                tags.add(tag.getTranslatedName().toLowerCase());
+                tags.add(StringUtil.camelToSnake(tag.getTranslatedName()));
             }
         }
         return new ArrayList<>(tags);

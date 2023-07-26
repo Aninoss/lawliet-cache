@@ -245,7 +245,7 @@ public class BooruDownloader {
                     if (contentType != null && (!animatedOnly || contentType.isAnimated())) passingRestrictions[1]++;
                     if (contentType != null && (!contentType.isVideo() || canBeVideo)) passingRestrictions[2]++;
                     if (score >= 0) passingRestrictions[3]++;
-                    if (NSFWUtil.tagListAllowed(boardImage.getTags(), filters, strictFilters)) passingRestrictions[4]++;
+                    if (!NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters)) passingRestrictions[4]++;
                     if (!mustBeExplicit || isExplicit) passingRestrictions[5]++;
                     if (notPending) passingRestrictions[6]++;
                     if (created <= maxPostDate) passingRestrictions[7]++;
@@ -256,7 +256,7 @@ public class BooruDownloader {
                         (!animatedOnly || contentType.isAnimated()) &&
                         (!contentType.isVideo() || canBeVideo) &&
                         score >= 0 &&
-                        NSFWUtil.tagListAllowed(boardImage.getTags(), filters, strictFilters) &&
+                        !NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters) &&
                         (!mustBeExplicit || isExplicit) &&
                         notPending &&
                         created <= maxPostDate &&

@@ -1,37 +1,38 @@
 package util;
 
-import java.util.HashSet;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 public final class NSFWUtil {
 
-    public static boolean tagListAllowed(List<String> tagList, List<String> filterTags, List<String> strictFilterTags) {
-        List<String> processedFilterTags = filterTags.stream()
-                .map(filterTag -> "_" + filterTag.toLowerCase() + "_")
-                .collect(Collectors.toList());
-
-        for (String tag : expandTags(tagList)) {
-            String processedTag = "_" + tag.toLowerCase() + "_";
-            if (processedFilterTags.stream().anyMatch(processedTag::contains) ||
-                    strictFilterTags.stream().anyMatch(tag::equalsIgnoreCase)
-            ) {
-                return false;
-            }
-        }
-        return true;
+    public static boolean containsFilterTags(List<String> tagList, List<String> filterTags, List<String> strictFilterTags) {
+        return containsFilterTags(StringUtils.join(tagList, " "), filterTags, strictFilterTags);
     }
 
-    private static Set<String> expandTags(List<String> tags) {
-        HashSet<String> expandedTags = new HashSet<>();
-        for (String tag : tags) {
-            expandedTags.add(tag.toLowerCase());
-            expandedTags.add(tag.toLowerCase().replaceAll("\\p{Punct}| ", "_").replace("__", "_"));
-            expandedTags.add(StringUtil.camelToSnake(tag));
-            expandedTags.add(StringUtil.camelToSnake(tag).replaceAll("\\p{Punct}| ", "_").replace("__", "_"));
+    public static boolean containsFilterTags(String tagString, List<String> filterTags, List<String> strictFilterTags) {
+        return containsNormalFilterTags(tagString, filterTags) ||
+                containsStrictFilters(tagString, strictFilterTags);
+    }
+
+    private static boolean containsNormalFilterTags(String tagString, List<String> filterTags) {
+        StringBuilder regexBuilder = new StringBuilder("(?i)(^|.* )(|[^-\\P{Punct}]|[^- ][^ ]*\\p{Punct})(");
+        for (int i = 0; i < filterTags.size(); i++) {
+            if (i > 0) {
+                regexBuilder.append("|");
+            }
+            regexBuilder.append(Pattern.quote(filterTags.get(i)));
         }
-        return expandedTags;
+        regexBuilder.append(")(( |\\p{Punct}).*|$)");
+
+        return tagString.matches(regexBuilder.toString());
+    }
+
+    private static boolean containsStrictFilters(String tagString, List<String> strictFilterTags) {
+        String newTagString = " " + tagString.toLowerCase() + " ";
+        return strictFilterTags.stream()
+                .anyMatch(t -> newTagString.contains(" " + t.toLowerCase() + " "));
     }
 
 }
