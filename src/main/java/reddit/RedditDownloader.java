@@ -91,7 +91,7 @@ public class RedditDownloader {
     private JSONArray retrievePostArray(String subreddit, String orderBy, int limit, String after) throws RedditException {
         try (Jedis jedis = jedisPool.getResource()) {
             if (jedis.exists(KEY_REDDIT_BLOCK)) {
-                return null;
+                throw new RedditException();
             }
         }
 

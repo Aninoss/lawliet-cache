@@ -106,7 +106,7 @@ public class PixivDownloader {
     public PixivImage retrieveImage(long guildId, String word, boolean nsfwAllowed, List<String> filters,
                                     List<String> strictFilters) throws PixivException {
         if (!nsfwAllowed) {
-            word += " -R-18";
+            word += " -R-18 -R18";
         }
 
         Set<String> blockSet;
@@ -209,7 +209,7 @@ public class PixivDownloader {
         apiLogin();
 
         SearchedIllustsFilter searchedIllustsFilter = new SearchedIllustsFilter();
-        searchedIllustsFilter.setWord(word + " -ロリ -ショタ -R-18G");
+        searchedIllustsFilter.setWord(word + " -ロリ -ショタ -R-18G -R18G");
         searchedIllustsFilter.setIncludeTranslatedTagResults(true);
         searchedIllustsFilter.setMergePlainKeywordResults(true);
         searchedIllustsFilter.setOffset(page * 30);

@@ -89,7 +89,7 @@ public class WebCache {
 
                 fromCache.set(false);
                 HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-                if (httpResponse.getBody() != null) {
+                if (httpResponse.getBody() != null && Program.isProductionMode()) {
                     writeHttpResponseToFile(key, httpResponse);
                     SetParams setParams = new SetParams();
                     setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
