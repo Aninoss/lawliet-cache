@@ -244,7 +244,7 @@ public class PixivDownloader {
                 .setImageUrls(extractImageUrls(illustration))
                 .setViews(illustration.getTotalView())
                 .setBookmarks(illustration.getTotalBookmarks())
-                .setNsfw(illustration.getSanityLevel() >= 6)
+                .setNsfw(illustration.getSanityLevel() >= 6 || hasNsfwTags(illustration))
                 .setInstant(illustration.getCreateDate().toInstant());
     }
 
@@ -268,6 +268,11 @@ public class PixivDownloader {
         }
 
         return imageProxyUrls;
+    }
+
+    private boolean hasNsfwTags(Illustration illustration) {
+        List<String> tags = extractTags(illustration);
+        return tags.stream().anyMatch(tag -> tag.equalsIgnoreCase("R-18") || tag.equalsIgnoreCase("R18"));
     }
 
     private List<String> extractTags(Illustration illustration) {
