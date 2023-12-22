@@ -140,14 +140,15 @@ public class BooruDownloader {
         }
 
         if (boardType.getMaxTags() >= 0) {
-            finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - 1));
-            visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - 1));
+            int reduce = (boardType == BoardType.DANBOORU ? 1 : 0) + (!canBeVideo ? 1 : 0);
+            finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - reduce));
+            visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - reduce));
         }
         if (boardType == BoardType.DANBOORU) {
             finalSearchKeys.append(" -ugoira");
         }
         if (!canBeVideo) {
-            if (boardType == BoardType.E621 || boardType == BoardType.E926) {
+            if (boardType == BoardType.E621 || boardType == BoardType.E926 || boardType == BoardType.RULE34_PAHEAL) {
                 finalSearchKeys.append(" -webm");
             } else {
                 finalSearchKeys.append(" -video");
@@ -197,7 +198,8 @@ public class BooruDownloader {
                                         List<String> filters, List<String> strictFilters, List<String> skippedResults,
                                         List<String> usedSearchKeys
     ) throws BooruException {
-        ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(), boardType.getBoardImageClass());
+        ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(),
+                boardType.getResponseFormat(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
         try {
             try {

@@ -1,17 +1,17 @@
 package booru;
 
-import java.util.List;
 import booru.autocomplete.*;
 import booru.counters.*;
-import booru.customboards.RealbooruBoard;
-import booru.customboards.RealbooruImage;
-import booru.customboards.Rule34Board;
+import booru.customboards.*;
 import core.WebCache;
+import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.impl.*;
 import redis.clients.jedis.JedisPool;
+
+import java.util.List;
 
 public enum BoardType {
 
@@ -23,7 +23,8 @@ public enum BoardType {
             Rule34Image.class,
             new Rule34Counter(),
             -1,
-            new DefaultAutoComplete("api.rule34.xxx")
+            new DefaultAutoComplete("api.rule34.xxx"),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     SAFEBOORU(
@@ -34,7 +35,8 @@ public enum BoardType {
             SafebooruImage.class,
             new SafebooruCounter(),
             -1,
-            new DefaultAutoComplete("safebooru.org")
+            new DefaultAutoComplete("safebooru.org"),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     REALBOORU(
@@ -45,7 +47,8 @@ public enum BoardType {
             RealbooruImage.class,
             new RealbooruCounter(),
             -1,
-            new DefaultAutoComplete("realbooru.com")
+            new DefaultAutoComplete("realbooru.com"),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     E621(
@@ -56,7 +59,8 @@ public enum BoardType {
             FurryImage.class,
             new E621Counter(),
             40,
-            new FurryAutoComplete("e621.net")
+            new FurryAutoComplete("e621.net"),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     KONACHAN(
@@ -67,7 +71,8 @@ public enum BoardType {
             KonachanImage.class,
             new KonachanCounter(),
             6,
-            new EmptyAutoComplete()
+            new EmptyAutoComplete(),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     DANBOORU(
@@ -78,7 +83,8 @@ public enum BoardType {
             DanbooruImage.class,
             new DanbooruCounter(),
             10,
-            new DanbooruAutoComplete()
+            new DanbooruAutoComplete(),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     GELBOORU(
@@ -89,7 +95,8 @@ public enum BoardType {
             GelbooruImage.class,
             new GelbooruCounter(),
             -1,
-            new GelbooruAutoComplete()
+            new GelbooruAutoComplete(),
+            ImageBoard.ResponseFormat.JSON
     ),
 
     E926(
@@ -100,7 +107,20 @@ public enum BoardType {
             FurryImage.class,
             new E926Counter(),
             40,
-            new FurryAutoComplete("e926.net")
+            new FurryAutoComplete("e926.net"),
+            ImageBoard.ResponseFormat.JSON
+    ),
+
+    RULE34_PAHEAL(
+            "rule34.paheal.net",
+            "https://rule34.paheal.net/post/view/",
+            100,
+            new Rule34PahealBoard(),
+            Rule34PahealImage.class,
+            new Rule34PahealCounter(),
+            3,
+            new Rule34PahealAutoComplete(),
+            ImageBoard.ResponseFormat.XML
     );
 
     private final String domain;
@@ -111,8 +131,10 @@ public enum BoardType {
     private final Counter counter;
     private final int maxTags;
     private final BooruAutoComplete autoComplete;
+    private final ImageBoard.ResponseFormat responseFormat;
 
-    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass, Counter counter, int maxTags, BooruAutoComplete autoComplete) {
+    BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass,
+              Counter counter, int maxTags, BooruAutoComplete autoComplete, ImageBoard.ResponseFormat responseFormat) {
         this.domain = domain;
         this.pagePrefix = pagePrefix;
         this.maxLimit = maxLimit;
@@ -121,6 +143,7 @@ public enum BoardType {
         this.counter = counter;
         this.maxTags = maxTags;
         this.autoComplete = autoComplete;
+        this.responseFormat = responseFormat;
     }
 
     public String getDomain() {
@@ -162,6 +185,10 @@ public enum BoardType {
             }
         }
         return null;
+    }
+
+    public ImageBoard.ResponseFormat getResponseFormat() {
+        return responseFormat;
     }
 
 }

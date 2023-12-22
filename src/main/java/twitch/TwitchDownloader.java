@@ -1,13 +1,5 @@
 package twitch;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -24,6 +16,15 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.params.SetParams;
 import util.InternetUtil;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class TwitchDownloader {
 
@@ -164,7 +165,7 @@ public class TwitchDownloader {
         String url = "https://api.twitch.tv/helix/users?login=" + InternetUtil.escapeForURL(name);
         String response = retrieveApi(url);
         JSONArray usersArrayJson = new JSONObject(response).getJSONArray("data");
-        if (usersArrayJson.length() > 0) {
+        if (!usersArrayJson.isEmpty()) {
             JSONObject userJson = usersArrayJson.getJSONObject(0);
             return new TwitchUser()
                     .setUserId(userJson.getString("id"))

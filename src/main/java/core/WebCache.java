@@ -197,8 +197,16 @@ public class WebCache {
             if (domain.equals(proxyTarget.getDomain())) {
                 String[] proxyDomains = System.getenv("MS_PROXY_HOSTS_" + proxyTarget.name()).split(",");
                 String selectedProxyDomain = proxyDomains[(int) (counter % proxyDomains.length)];
+
                 if (!selectedProxyDomain.equals("null")) {
-                    return selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+                    String headersEnv = System.getenv("MS_PROXY_HEADERS_" + proxyTarget.name());
+                    String header = headersEnv != null ? headersEnv.split(",")[(int) (counter % proxyDomains.length)] : null;
+
+                    if (header != null) {
+                        return selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8) + "/" + URLEncoder.encode(header, StandardCharsets.UTF_8);
+                    } else {
+                        return selectedProxyDomain + "/proxy/" + URLEncoder.encode(url, StandardCharsets.UTF_8) + "/" + URLEncoder.encode(System.getenv("MS_PROXY_AUTH"), StandardCharsets.UTF_8);
+                    }
                 }
                 break;
             }
