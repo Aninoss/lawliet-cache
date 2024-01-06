@@ -236,11 +236,15 @@ public class BooruDownloader {
             String fileUrl = boardImage.getURL();
             if (fileUrl != null) {
                 int score = boardImage.getScore();
-                ContentType contentType = ContentType.parseFromUrl(fileUrl);
                 boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
                 boolean notPending = !boardImage.isPending();
                 long created = boardImage.getCreationMillis();
                 boolean blocked = blockSet.contains(fileUrl);
+
+                ContentType contentType = ContentType.parseFromUrl(fileUrl);
+                if (contentType == null) {
+                    contentType = ContentType.parseFromTags(boardImage.getTags());
+                }
 
                 if (!Program.isProductionMode()) {
                     if (contentType != null) passingRestrictions[0]++;

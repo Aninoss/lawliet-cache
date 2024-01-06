@@ -1,5 +1,7 @@
 package booru;
 
+import java.util.List;
+
 public class ContentType {
 
     private final boolean animated;
@@ -28,6 +30,22 @@ public class ContentType {
             case "mp4", "avi", "webm" -> new ContentType(true, true);
             default -> null;
         };
+    }
+
+    public static ContentType parseFromTags(List<String> tags) {
+        boolean animated = false;
+        boolean video = false;
+
+        for (String tag : tags) {
+            if (tag.equalsIgnoreCase("animated")) {
+                animated = true;
+            }
+            if (tag.equalsIgnoreCase("video") || tag.equalsIgnoreCase("webm")) {
+                video = true;
+            }
+        }
+
+        return new ContentType(animated, video);
     }
 
 }
