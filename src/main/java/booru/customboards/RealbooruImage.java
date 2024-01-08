@@ -1,14 +1,19 @@
 package booru.customboards;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class RealbooruImage implements BoardImage {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(RealbooruImage.class);
 
     private long id;
     private String directory;
@@ -22,6 +27,11 @@ public class RealbooruImage implements BoardImage {
     private long change; // timestamp in seconds
 
     public String getFileUrl() {
+        if (hash == null) {
+            LOGGER.error("Realbooru image no hash for file with id {}", id);
+            return null;
+        }
+
         String dir = hash.substring(0, 2) + "/" + hash.substring(2, 4);
         return "https://realbooru.com/images/" + dir + "/" + hash + "." + image.split("\\.")[1];
     }

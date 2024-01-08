@@ -220,7 +220,7 @@ public class BooruDownloader {
             throw new BooruException("Error in imageboard type " + boardType.getDomain(), e);
         }
 
-        if (boardImages.isEmpty()) {
+        if (boardImages == null || boardImages.isEmpty()) {
             return null;
         }
 
@@ -231,7 +231,7 @@ public class BooruDownloader {
             blockSet = jedis.hgetAll(REPORTS_KEY).keySet();
         }
 
-        int[] passingRestrictions = new int[10];
+        int[] passingRestrictions = new int[9];
         for (BoardImage boardImage : boardImages) {
             String fileUrl = boardImage.getURL();
             if (fileUrl != null) {
@@ -247,19 +247,17 @@ public class BooruDownloader {
                 }
 
                 if (!Program.isProductionMode()) {
-                    if (contentType != null) passingRestrictions[0]++;
-                    if (contentType != null && (!animatedOnly || contentType.isAnimated())) passingRestrictions[1]++;
-                    if (contentType != null && (!contentType.isVideo() || canBeVideo)) passingRestrictions[2]++;
-                    if (score >= 0) passingRestrictions[3]++;
-                    if (!NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters)) passingRestrictions[4]++;
-                    if (!mustBeExplicit || isExplicit) passingRestrictions[5]++;
-                    if (notPending) passingRestrictions[6]++;
-                    if (created <= maxPostDate) passingRestrictions[7]++;
-                    if (!blocked) passingRestrictions[8]++;
+                    if (!animatedOnly || contentType.isAnimated()) passingRestrictions[0]++;
+                    if (!contentType.isVideo() || canBeVideo) passingRestrictions[1]++;
+                    if (score >= 0) passingRestrictions[2]++;
+                    if (!NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters)) passingRestrictions[3]++;
+                    if (!mustBeExplicit || isExplicit) passingRestrictions[4]++;
+                    if (notPending) passingRestrictions[5]++;
+                    if (created <= maxPostDate) passingRestrictions[6]++;
+                    if (!blocked) passingRestrictions[7]++;
                 }
 
-                if (contentType != null &&
-                        (!animatedOnly || contentType.isAnimated()) &&
+                if ((!animatedOnly || contentType.isAnimated()) &&
                         (!contentType.isVideo() || canBeVideo) &&
                         score >= 0 &&
                         !NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters) &&
@@ -268,7 +266,7 @@ public class BooruDownloader {
                         created <= maxPostDate &&
                         !blocked
                 ) {
-                    passingRestrictions[9]++;
+                    passingRestrictions[8]++;
                     pornImages.add(new BooruImageMeta(fileUrl, score, boardImage, contentType));
                 }
             }

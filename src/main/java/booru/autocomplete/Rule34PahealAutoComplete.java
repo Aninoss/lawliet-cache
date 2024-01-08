@@ -3,7 +3,10 @@ package booru.autocomplete;
 import booru.BooruChoice;
 import core.WebCache;
 import org.apache.commons.lang3.tuple.Pair;
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +18,8 @@ import java.util.stream.Collectors;
 
 public class Rule34PahealAutoComplete implements BooruAutoComplete {
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(Rule34PahealAutoComplete.class);
+
     @Override
     public List<BooruChoice> retrieve(WebCache webCache, String search) {
         if (search.isBlank()) {
@@ -23,12 +28,17 @@ public class Rule34PahealAutoComplete implements BooruAutoComplete {
 
         String url = "https://rule34.paheal.net/api/internal/autocomplete?s=" + URLEncoder.encode(search, StandardCharsets.UTF_8);
         String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes()).getBody();
-        return extractJson(new JSONObject(data)).stream()
-                .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
-                .map(entry -> new BooruChoice()
-                        .setName(entry.getKey() + " (" + entry.getValue() + ")")
-                        .setValue(entry.getKey()))
-                .collect(Collectors.toList());
+        try {
+            return extractJson(new JSONObject(data)).stream()
+                    .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
+                    .map(entry -> new BooruChoice()
+                            .setName(entry.getKey() + " (" + entry.getValue() + ")")
+                            .setValue(entry.getKey()))
+                    .collect(Collectors.toList());
+        } catch (JSONException e) {
+            LOGGER.error("Rule34 Paheal counter invalid response: {}", data);
+            return Collections.emptyList();
+        }
     }
 
     private List<Pair<String, Integer>> extractJson(JSONObject jsonObject) {
