@@ -29,13 +29,11 @@ public class WebCache {
     public static final String PROXY_COUNTER_KEY = "proxy_counter:";
 
     private final JedisPool jedisPool;
-    private final LockManager lockManager;
     private final OkHttpClient client;
     private final Random random = new Random();
 
-    public WebCache(JedisPool jedisPool, LockManager lockManager) {
+    public WebCache(JedisPool jedisPool) {
         this.jedisPool = jedisPool;
-        this.lockManager = lockManager;
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequestsPerHost(25);
         ConnectionPool connectionPool = new ConnectionPool(5, 10, TimeUnit.SECONDS);
@@ -71,33 +69,34 @@ public class WebCache {
             key = "webresponse:" + method + ":" + url.hashCode() + ":" + body.hashCode() + ":" + contentType.hashCode();
         }
 
-        Object lock = lockManager.get(key);
-        synchronized (lock) {
-            try (Jedis jedis = jedisPool.getResource()) {
-                byte[] keyBytes = key.getBytes();
-                byte[] payloadBytes = jedis.get(keyBytes);
+        try (Jedis jedis = jedisPool.getResource();
+             RedisLock redisLock = new RedisLock(jedis, "webcache_lock:" + key)
+        ) {
+            redisLock.blockThread();
 
-                if (payloadBytes != null) {
-                    fromCache.set(true);
-                    HttpResponse httpResponse = payloadBytes.length > 0
-                            ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
-                            : readHttpResponseFromFile(key);
-                    if (httpResponse != null && httpResponse.getBody() != null && Program.isProductionMode()) {
-                        return httpResponse;
-                    }
+            byte[] keyBytes = key.getBytes();
+            byte[] payloadBytes = jedis.get(keyBytes);
+
+            if (payloadBytes != null) {
+                fromCache.set(true);
+                HttpResponse httpResponse = payloadBytes.length > 0
+                        ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
+                        : readHttpResponseFromFile(key);
+                if (httpResponse != null && httpResponse.getBody() != null && Program.isProductionMode()) {
+                    return httpResponse;
                 }
-
-                fromCache.set(false);
-                HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-                if (httpResponse.getBody() != null && Program.isProductionMode()) {
-                    writeHttpResponseToFile(key, httpResponse);
-                    SetParams setParams = new SetParams();
-                    setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
-                    jedis.set(keyBytes, new byte[0], setParams);
-                }
-
-                return httpResponse;
             }
+
+            fromCache.set(false);
+            HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
+            if (httpResponse.getBody() != null && Program.isProductionMode()) {
+                writeHttpResponseToFile(key, httpResponse);
+                SetParams setParams = new SetParams();
+                setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
+                jedis.set(keyBytes, new byte[0], setParams);
+            }
+
+            return httpResponse;
         }
     }
 

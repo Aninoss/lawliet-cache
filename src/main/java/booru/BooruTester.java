@@ -1,16 +1,17 @@
 package booru;
 
-import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import core.Program;
+import core.RedisLock;
 import core.WebCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.params.SetParams;
+
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class BooruTester {
 
@@ -28,18 +29,14 @@ public class BooruTester {
         if (Program.isProductionMode()) {
             ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             scheduler.scheduleAtFixedRate(() -> {
-                try (Jedis jedis = jedisPool.getResource()) {
-                    SetParams params = new SetParams();
-                    params.ex(Duration.ofMinutes(1).toSeconds());
-                    params.nx();
-                    String res = jedis.set(KEY_BOORU_TESTER_LOCK, "true", params);
-                    if ("OK".equals(res)) {
-                        try {
-                            schedulerTask();
-                        } catch (Throwable e) {
-                            LOGGER.error("Exception in scheduler task", e);
-                        }
+                try (Jedis jedis = jedisPool.getResource();
+                     RedisLock redisLock = new RedisLock(jedis, KEY_BOORU_TESTER_LOCK, false, Duration.ofMinutes(1))
+                ) {
+                    if (redisLock.isFree()) {
+                        schedulerTask();
                     }
+                } catch (Throwable e) {
+                    LOGGER.error("Exception in scheduler task", e);
                 }
             }, 0, 10, TimeUnit.SECONDS);
         }

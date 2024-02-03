@@ -32,9 +32,8 @@ public class RestService {
             System.getenv("REDIS_HOST"),
             Integer.parseInt(System.getenv("REDIS_PORT"))
     );
-    private final LockManager lockManager = new LockManager();
-    private final WebCache webCache = new WebCache(jedisPool, lockManager);
-    private final RandomPicker randomPicker = new RandomPicker(jedisPool, lockManager);
+    private final WebCache webCache = new WebCache(jedisPool);
+    private final RandomPicker randomPicker = new RandomPicker(jedisPool);
 
     private final BooruDownloader booruDownloader = new BooruDownloader(webCache, jedisPool);
     private final RedditDownloader redditDownloader = new RedditDownloader(webCache, jedisPool);

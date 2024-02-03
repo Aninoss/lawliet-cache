@@ -3,6 +3,7 @@ package twitch;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import core.RedisLock;
 import core.WebCache;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -48,18 +49,14 @@ public class TwitchDownloader {
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
-            try (Jedis jedis = jedisPool.getResource()) {
-                SetParams params = new SetParams();
-                params.ex(Duration.ofMinutes(4).toSeconds());
-                params.nx();
-                String res = jedis.set(KEY_TWITCH_SCHEDULER_LOCK, "true", params);
-                if ("OK".equals(res)) {
-                    try {
-                        schedulerTask();
-                    } catch (Throwable e) {
-                        LOGGER.error("Exception in scheduler task", e);
-                    }
+            try (Jedis jedis = jedisPool.getResource();
+                 RedisLock redisLock = new RedisLock(jedis, KEY_TWITCH_SCHEDULER_LOCK, false, Duration.ofMinutes(4))
+            ) {
+                if (redisLock.isFree()) {
+                    schedulerTask();
                 }
+            } catch (Throwable e) {
+                LOGGER.error("Exception in scheduler task", e);
             }
         }, 0, 10, TimeUnit.SECONDS);
     }
