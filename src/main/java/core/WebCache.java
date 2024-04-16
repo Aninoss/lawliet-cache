@@ -78,16 +78,15 @@ public class WebCache {
                 byte[] payloadBytes = jedis.get(keyBytes);
 
                 if (payloadBytes != null) {
-                    fromCache.set(true);
                     HttpResponse httpResponse = payloadBytes.length > 0
                             ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
                             : readHttpResponseFromFile(key);
                     if (httpResponse != null && httpResponse.getBody() != null && Program.isProductionMode()) {
+                        fromCache.set(true);
                         return httpResponse;
                     }
                 }
 
-                fromCache.set(false);
                 HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
                 if (httpResponse.getBody() != null && Program.isProductionMode()) {
                     writeHttpResponseToFile(key, httpResponse);
@@ -96,6 +95,7 @@ public class WebCache {
                     jedis.set(keyBytes, new byte[0], setParams);
                 }
 
+                fromCache.set(false);
                 return httpResponse;
             }
         }
@@ -104,12 +104,6 @@ public class WebCache {
     public HttpResponse getWithoutCache(String url, HttpHeader... headers) {
         try (Jedis jedis = jedisPool.getResource()) {
             return requestWithoutCache(jedis, METHOD_GET, url, null, null, headers);
-        }
-    }
-
-    public HttpResponse requestWithoutCache(String method, String url, String body, String contentType, HttpHeader... headers) {
-        try (Jedis jedis = jedisPool.getResource()) {
-            return requestWithoutCache(jedis, method, url, body, contentType, headers);
         }
     }
 
@@ -147,6 +141,9 @@ public class WebCache {
             }
 
             try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                if (response.code() / 100 != 2) {
+                    LOGGER.warn("Cache: error response {} for url {}", response.code(), url);
+                }
                 if (response.code() == 503) {
                     jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
                 } else if (response.code() / 100 == 5) {

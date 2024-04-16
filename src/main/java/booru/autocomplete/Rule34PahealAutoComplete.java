@@ -36,7 +36,7 @@ public class Rule34PahealAutoComplete implements BooruAutoComplete {
                             .setValue(entry.getKey()))
                     .collect(Collectors.toList());
         } catch (JSONException e) {
-            LOGGER.error("Rule34 Paheal counter invalid response: {}", data);
+            LOGGER.error("Rule34 Paheal counter invalid response: {}", data, e);
             return Collections.emptyList();
         }
     }
@@ -44,7 +44,13 @@ public class Rule34PahealAutoComplete implements BooruAutoComplete {
     private List<Pair<String, Integer>> extractJson(JSONObject jsonObject) {
         List<Pair<String, Integer>> tags = new ArrayList<>();
         for (String key : jsonObject.keySet()) {
-            tags.add(Pair.of(key, jsonObject.getInt(key)));
+            JSONObject json = jsonObject.getJSONObject(key);
+            String tagKey = key;
+            if (json.has("newtag") && !json.isNull("newtag")) {
+                tagKey = json.getString("newtag");
+            }
+
+            tags.add(Pair.of(tagKey, json.getInt("count")));
         }
         return tags;
     }
