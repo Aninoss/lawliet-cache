@@ -292,14 +292,18 @@ public class BooruDownloader {
         String pageUrl = boardType.getPageUrl(image.getId());
         try (Jedis jedis = jedisPool.getResource()) {
             if (contentType.isVideo()) {
-                if (boardType == BoardType.RULE34) {
-                    String[] parts = imageUrl.split("/");
-                    int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
-                    imageUrl = rule34VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                } else if (boardType == BoardType.DANBOORU) {
-                    String[] parts = imageUrl.split("/");
-                    int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
-                    imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                switch (boardType) {
+                    case RULE34 -> {
+                        String[] parts = imageUrl.split("/");
+                        int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
+                        imageUrl = rule34VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                    }
+                    case DANBOORU -> {
+                        String[] parts = imageUrl.split("/");
+                        int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                        imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                    }
+                    case REALBOORU -> imageUrl = imageUrl.replace(".webm", ".mp4");
                 }
                 jedis.incr(boardType.name().toLowerCase() + "_video");
             }
