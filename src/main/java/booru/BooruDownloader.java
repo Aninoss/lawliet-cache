@@ -37,6 +37,7 @@ public class BooruDownloader {
     private final Random random = new Random();
     private final JedisPool jedisPool;
     private final BooruTester booruTester;
+    private final BooruIdThresholdFinder booruIdThresholdFinder;
     private final ConsistentHash<Integer> consistentHash;
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
@@ -58,6 +59,7 @@ public class BooruDownloader {
                 .build();
         this.webCache = webCache;
         this.booruTester = new BooruTester(webCache, jedisPool);
+        this.booruIdThresholdFinder = new BooruIdThresholdFinder(webCache, jedisPool);
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
 
         int mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
@@ -140,7 +142,7 @@ public class BooruDownloader {
         }
 
         if (boardType.getMaxTags() >= 0) {
-            int reduce = (boardType == BoardType.DANBOORU ? 1 : 0) + (!canBeVideo ? 1 : 0);
+            int reduce = 1 + (boardType == BoardType.DANBOORU ? 1 : 0) + (!canBeVideo ? 1 : 0);
             finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - reduce));
             visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - reduce));
         }
@@ -152,6 +154,14 @@ public class BooruDownloader {
                 finalSearchKeys.append(" -webm");
             } else {
                 finalSearchKeys.append(" -video");
+            }
+        }
+        if (boardType.getHasAgeSpecifier()) {
+            finalSearchKeys.append(" age:>=3days");
+        } else {
+            Long idThreshold = booruIdThresholdFinder.get(boardType);
+            if (idThreshold != null) {
+                finalSearchKeys.append(" id:<=").append(idThreshold);
             }
         }
 

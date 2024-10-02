@@ -1,10 +1,11 @@
 package booru;
 
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 public class BooruImageCacheSearchKey {
 
@@ -20,7 +21,6 @@ public class BooruImageCacheSearchKey {
         this.guildId = guildId;
         this.domain = domain;
         this.searchKey = searchKey;
-        renameOldKey();
     }
 
     public List<BooruImageMeta> filter(List<BooruImageMeta> imageURLs) {
@@ -48,17 +48,6 @@ public class BooruImageCacheSearchKey {
 
     private String getKey() {
         return "booruselected:" + guildId + ":" + domain + ":" + searchKey.hashCode();
-    }
-
-    private void renameOldKey() { //TODO: remove after 7 days
-        String oldKey = "booruselected:" + guildId + ":" + domain + ":" + searchKey;
-        try (Jedis jedis = jedisPool.getResource()) {
-            if (jedis.exists(oldKey)) {
-                jedis.rename(oldKey, getKey());
-            }
-        } catch (Throwable e) {
-            //ignore
-        }
     }
 
 }
