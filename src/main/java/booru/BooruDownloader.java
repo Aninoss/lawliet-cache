@@ -156,13 +156,10 @@ public class BooruDownloader {
                 finalSearchKeys.append(" -video");
             }
         }
-        if (boardType.getHasAgeSpecifier()) {
-            finalSearchKeys.append(" age:>=3days");
-        } else {
-            Long idThreshold = booruIdThresholdFinder.get(boardType);
-            if (idThreshold != null) {
-                finalSearchKeys.append(" id:<=").append(idThreshold);
-            }
+
+        Long idThreshold = booruIdThresholdFinder.get(boardType);
+        if (idThreshold != null) {
+            finalSearchKeys.append(" id:<=").append(idThreshold);
         }
 
         String finalSearchKeysString = finalSearchKeys.toString();

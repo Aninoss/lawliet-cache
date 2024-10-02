@@ -24,8 +24,7 @@ public enum BoardType {
             new Rule34Counter(),
             -1,
             new DefaultAutoComplete("api.rule34.xxx"),
-            ImageBoard.ResponseFormat.JSON,
-            false
+            ImageBoard.ResponseFormat.JSON
     ),
 
     SAFEBOORU(
@@ -37,8 +36,7 @@ public enum BoardType {
             new SafebooruCounter(),
             -1,
             new DefaultAutoComplete("safebooru.org"),
-            ImageBoard.ResponseFormat.JSON,
-            false
+            ImageBoard.ResponseFormat.JSON
     ),
 
     REALBOORU(
@@ -50,8 +48,7 @@ public enum BoardType {
             new RealbooruCounter(),
             -1,
             new DefaultAutoComplete("realbooru.com"),
-            ImageBoard.ResponseFormat.JSON,
-            false
+            ImageBoard.ResponseFormat.JSON
     ),
 
     E621(
@@ -63,8 +60,7 @@ public enum BoardType {
             new E621Counter(),
             40,
             new FurryAutoComplete("e621.net"),
-            ImageBoard.ResponseFormat.JSON,
-            true
+            ImageBoard.ResponseFormat.JSON
     ),
 
     KONACHAN(
@@ -76,8 +72,7 @@ public enum BoardType {
             new KonachanCounter(),
             6,
             new EmptyAutoComplete(),
-            ImageBoard.ResponseFormat.JSON,
-            false
+            ImageBoard.ResponseFormat.JSON
     ),
 
     DANBOORU(
@@ -89,8 +84,7 @@ public enum BoardType {
             new DanbooruCounter(),
             10,
             new DanbooruAutoComplete(),
-            ImageBoard.ResponseFormat.JSON,
-            true
+            ImageBoard.ResponseFormat.JSON
     ),
 
     GELBOORU(
@@ -102,8 +96,7 @@ public enum BoardType {
             new GelbooruCounter(),
             -1,
             new GelbooruAutoComplete(),
-            ImageBoard.ResponseFormat.JSON,
-            false
+            ImageBoard.ResponseFormat.JSON
     ),
 
     E926(
@@ -115,8 +108,7 @@ public enum BoardType {
             new E926Counter(),
             40,
             new FurryAutoComplete("e926.net"),
-            ImageBoard.ResponseFormat.JSON,
-            true
+            ImageBoard.ResponseFormat.JSON
     ),
 
     RULE34_PAHEAL(
@@ -128,8 +120,7 @@ public enum BoardType {
             new Rule34PahealCounter(),
             3,
             new Rule34PahealAutoComplete(),
-            ImageBoard.ResponseFormat.XML,
-            false
+            ImageBoard.ResponseFormat.XML
     );
 
     private final String domain;
@@ -141,11 +132,9 @@ public enum BoardType {
     private final int maxTags;
     private final BooruAutoComplete autoComplete;
     private final ImageBoard.ResponseFormat responseFormat;
-    private final boolean hasAgeSpecifier;
 
     BoardType(String domain, String pagePrefix, int maxLimit, Board board, Class<? extends BoardImage> boardImageClass,
-              Counter counter, int maxTags, BooruAutoComplete autoComplete, ImageBoard.ResponseFormat responseFormat,
-              boolean hasAgeSpecifier) {
+              Counter counter, int maxTags, BooruAutoComplete autoComplete, ImageBoard.ResponseFormat responseFormat) {
         this.domain = domain;
         this.pagePrefix = pagePrefix;
         this.maxLimit = maxLimit;
@@ -155,7 +144,6 @@ public enum BoardType {
         this.maxTags = maxTags;
         this.autoComplete = autoComplete;
         this.responseFormat = responseFormat;
-        this.hasAgeSpecifier = hasAgeSpecifier;
     }
 
     public String getDomain() {
@@ -201,9 +189,5 @@ public enum BoardType {
 
     public ImageBoard.ResponseFormat getResponseFormat() {
         return responseFormat;
-    }
-
-    public boolean getHasAgeSpecifier() {
-        return hasAgeSpecifier;
     }
 }

@@ -63,10 +63,6 @@ public class BooruIdThresholdFinder {
 
     private void schedulerTask() {
         for (BoardType boardType : BoardType.values()) {
-            if (boardType.getHasAgeSpecifier()) {
-                continue;
-            }
-
             Long id = null;
             Integer pageEstimate = getThresholdIdPageEstimate(boardType);
             if (pageEstimate != null) {
