@@ -151,7 +151,7 @@ public enum BoardType {
     }
 
     public int getMaxLimit() {
-        return maxLimit;
+        return Math.min(maxLimit, 200);
     }
 
     public String getPageUrl(long id) {
