@@ -3,14 +3,17 @@ package booru.counters;
 import core.WebCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import redis.clients.jedis.JedisPool;
+import util.InternetUtil;
 import util.StringUtil;
 
-public abstract class FurryCounter implements Counter {
+public class RealbooruWorkaroundCounter extends SearchCounter {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(FurryCounter.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(DanbooruCounter.class);
 
-    protected int countFurry(WebCache webCache, String url, boolean withCache) {
-        String domain = url.split("/")[2];
+    @Override
+    public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
+        String url = "https://realbooru.com/index.php?page=post&s=list&tags=" + InternetUtil.escapeForURL(tags);
         String data;
         try {
             if (withCache) {
@@ -19,7 +22,7 @@ public abstract class FurryCounter implements Counter {
                 data = webCache.getWithoutCache(url).getBody();
             }
         } catch (Throwable e) {
-            LOGGER.error("Error for domain {}", domain, e);
+            LOGGER.error("Error for domain {}", url.split("/")[2], e);
             return -1;
         }
 
@@ -27,8 +30,12 @@ public abstract class FurryCounter implements Counter {
             return -1;
         }
 
-        int posts = StringUtil.countMatches(data, "<article id=\"post_");
-        String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\">", "</menu></div>");
+        int posts = StringUtil.countMatches(data, "<div class=\"col thumb\"");
+        if (posts == 0) {
+            return 0;
+        }
+
+        String[] groups = StringUtil.extractGroups(data, "<div id=\"paginator\">", "</div>");
         if (groups.length == 0) {
             return -1;
         }

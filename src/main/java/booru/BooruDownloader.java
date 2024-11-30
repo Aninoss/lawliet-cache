@@ -205,26 +205,30 @@ public class BooruDownloader {
                                         List<String> filters, List<String> strictFilters, List<String> skippedResults,
                                         List<String> usedSearchKeys
     ) throws BooruException {
-        ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(),
-                boardType.getResponseFormat(), boardType.getBoardImageClass());
         List<? extends BoardImage> boardImages;
-        try {
+        if (boardType.getWorkaroundSearcher() != null) {
+            boardImages = boardType.getWorkaroundSearcher().search(page, searchTerm, webCache);
+        } else {
+            ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(),
+                    boardType.getResponseFormat(), boardType.getBoardImageClass());
             try {
-                boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm)
-                        .blocking();
-            } catch (RuntimeException e) {
-                if (e.getCause() != null) {
-                    throw e.getCause();
-                } else {
-                    throw e;
+                try {
+                    boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm)
+                            .blocking();
+                } catch (RuntimeException e) {
+                    if (e.getCause() != null) {
+                        throw e.getCause();
+                    } else {
+                        throw e;
+                    }
                 }
+            } catch (QueryParseException e) {
+                throw new BooruException("Failed to query " + boardType.getDomain());
+            } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
+                throw new BooruException();
+            } catch (Throwable e) {
+                throw new BooruException("Error in imageboard type " + boardType.getDomain(), e);
             }
-        } catch (QueryParseException e) {
-            throw new BooruException("Failed to query " + boardType.getDomain());
-        } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
-            throw new BooruException();
-        } catch (Throwable e) {
-            throw new BooruException("Error in imageboard type " + boardType.getDomain(), e);
         }
 
         if (boardImages == null || boardImages.isEmpty()) {
@@ -285,7 +289,11 @@ public class BooruDownloader {
 
         BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
         if (booruImageMeta != null) {
-            return createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
+            BooruImage booruImage = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
+            if (boardType.getWorkaroundSearcher() != null) {
+                boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
+            }
+            return booruImage;
         } else {
             return null;
         }
