@@ -27,16 +27,25 @@ public class RealbooruWorkaroundCounter extends SearchCounter {
         }
 
         if (data == null) {
+            if (tags.isEmpty() && !withCache) {
+                LOGGER.error("Realbooru data is null");
+            }
             return -1;
         }
 
         int posts = StringUtil.countMatches(data, "<div class=\"col thumb\"");
         if (posts == 0) {
+            if (tags.isEmpty() && !withCache) {
+                LOGGER.error("Realbooru no posts:\n{}", data);
+            }
             return 0;
         }
 
         String[] groups = StringUtil.extractGroups(data, "<div id=\"paginator\">", "</div>");
         if (groups.length == 0) {
+            if (tags.isEmpty() && !withCache) {
+                LOGGER.error("Realbooru no groups:\n{}", data);
+            }
             return -1;
         }
 
