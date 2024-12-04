@@ -311,12 +311,12 @@ public class BooruDownloader {
                     case RULE34 -> {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
-                        imageUrl = rule34VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                        imageUrl = rule34VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
                     }
                     case DANBOORU -> {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
-                        imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                        imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
                     }
                     case REALBOORU -> imageUrl = imageUrl.replace(".webm", ".mp4");
                 }
@@ -339,14 +339,14 @@ public class BooruDownloader {
         return consistentHash.get(key);
     }
 
-    private String rule34VideoUrlToOwnCDN(String targetDomain, String videoUrl) {
+    private String rule34VideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
         String[] slashParts = videoUrl.split("/");
-        return "https://" + targetDomain + "/media/rule34/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0];
+        return "https://" + targetDomain + "/player/rule34/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0] + "&w=" + image.getWidth() + "&h=" + image.getHeight();
     }
 
-    private String danbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl) {
+    private String danbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
         String[] slashParts = videoUrl.split("/");
-        return "https://" + targetDomain + "/media/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0];
+        return "https://" + targetDomain + "/player/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0] + "&w=" + image.getWidth() + "&h=" + image.getHeight();
     }
 
 }
