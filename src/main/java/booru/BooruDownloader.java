@@ -318,7 +318,18 @@ public class BooruDownloader {
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
                     }
-                    case REALBOORU -> imageUrl = imageUrl.replace(".webm", ".mp4");
+                    case E621 -> {
+                        imageUrl = imageUrl.replace(".webm", ".mp4");
+                        String[] parts = imageUrl.split("/");
+                        int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                        imageUrl = e621VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
+                    }
+                    case REALBOORU -> {
+                        imageUrl = imageUrl.replace(".webm", ".mp4");
+                        String[] parts = imageUrl.split("/");
+                        int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                        imageUrl = realbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
+                    }
                 }
                 jedis.incr(boardType.name().toLowerCase() + "_video");
             }
@@ -347,6 +358,16 @@ public class BooruDownloader {
     private String danbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
         String[] slashParts = videoUrl.split("/");
         return "https://" + targetDomain + "/player/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0] + "&w=" + image.getWidth() + "&h=" + image.getHeight();
+    }
+
+    private String e621VideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
+        String[] slashParts = videoUrl.split("/");
+        return "https://" + targetDomain + "/player/e621/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0] + "&w=" + image.getWidth() + "&h=" + image.getHeight();
+    }
+
+    private String realbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
+        String[] slashParts = videoUrl.split("/");
+        return "https://" + targetDomain + "/player/realbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?w=" + image.getWidth() + "&h=" + image.getHeight();
     }
 
 }
