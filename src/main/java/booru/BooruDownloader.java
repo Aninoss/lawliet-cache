@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -30,6 +32,7 @@ public class BooruDownloader {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
     public static final String REPORTS_KEY = "reports";
+    private static final int MAX_ALERT_REQUESTS_PER_SECOND = Integer.parseInt(System.getenv("MAX_BOORU_ALERT_REQUESTS_PER_SECOND"));
 
     private final BooruFilter booruFilter;
     private final OkHttpClient client;
@@ -39,6 +42,8 @@ public class BooruDownloader {
     private final BooruTester booruTester;
     private final BooruIdThresholdFinder booruIdThresholdFinder;
     private final ConsistentHash<Integer> consistentHash;
+
+    private int alertRequestsThisSecond = 0;
 
     public BooruDownloader(WebCache webCache, JedisPool jedisPool) {
         this.jedisPool = jedisPool;
@@ -65,6 +70,14 @@ public class BooruDownloader {
         int mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));
         List<Integer> mediaServerIndexes = IntStream.range(0, mediaServerMaxShards).boxed().collect(Collectors.toList());
         this.consistentHash = new ConsistentHash<>(mediaServerIndexes, 10);
+
+        Executors.newSingleThreadScheduledExecutor()
+                .scheduleAtFixedRate(() -> {
+                    if (alertRequestsThisSecond > MAX_ALERT_REQUESTS_PER_SECOND) {
+                        LOGGER.warn("Booru alert requests have been blocked! {} / {}", alertRequestsThisSecond, MAX_ALERT_REQUESTS_PER_SECOND);
+                    }
+                    alertRequestsThisSecond = 0;
+                }, 1, 1, TimeUnit.SECONDS);
     }
 
     public List<BooruChoice> getTags(String domain, String search) throws BooruException {
@@ -95,12 +108,15 @@ public class BooruDownloader {
                 .collect(Collectors.toList());
     }
 
-    public BooruImage getPicture(long guildId, String domain, String searchKeys, boolean animatedOnly,
+    public BooruImage getPicture(long guildId, boolean premium, String domain, String searchKeys, boolean animatedOnly,
                                  boolean mustBeExplicit, boolean canBeVideo, List<String> filters,
                                  List<String> strictFilters, List<String> skippedResults, boolean test) throws BooruException {
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new BooruException("No image board for domain " + domain);
+        }
+        if (boardType == BoardType.RULE34 && guildId <= 64 && !premium && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
+            throw new BooruException();
         }
 
         if (test) {

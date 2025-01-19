@@ -159,7 +159,7 @@ public class WebCache {
                         .setBody(response.body().string());
             } catch (Throwable e) {
                 long errors = jedis.incr(domainBlockKey);
-                LOGGER.error("Web cache error ({}; {} errors)", domain, errors);
+                LOGGER.error("Web cache error ({} - {}; {} errors)", domain, e.getClass(), errors);
                 if (errors >= MAX_ERRORS) {
                     jedis.set(domainOverloadKey, String.valueOf(System.currentTimeMillis()));
                 }
