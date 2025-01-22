@@ -115,7 +115,7 @@ public class BooruDownloader {
         if (boardType == null) {
             throw new BooruException("No image board for domain " + domain);
         }
-        if (boardType == BoardType.RULE34 && guildId <= 64 && !premium && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
+        if (guildId <= 64 && !premium && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
             throw new BooruException();
         }
 
