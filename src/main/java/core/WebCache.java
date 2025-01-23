@@ -27,6 +27,7 @@ public class WebCache {
     public static final int MAX_ERRORS = 15;
     public static final String METHOD_GET = "GET";
     public static final String PROXY_COUNTER_KEY = "proxy_counter:";
+    public static final boolean DOMAIN_BLOCKER = Boolean.parseBoolean(System.getenv("DOMAIN_BLOCKER"));
 
     private final JedisPool jedisPool;
     private final LockManager lockManager;
@@ -126,59 +127,60 @@ public class WebCache {
         String domainOverloadKey = "domain_overload:" + domain;
         String domainBlockValue = jedis.get(domainBlockKey);
         int domainBlockCounter = Optional.ofNullable(domainBlockValue).map(Integer::parseInt).orElse(0);
-        if (domainBlockCounter < MAX_ERRORS && checkHostOverload(jedis, domainOverloadKey)) {
-            Request.Builder requestBuilder = new Request.Builder()
-                    .url(url)
-                    .addHeader("User-Agent", USER_AGENT);
 
-            for (HttpHeader header : headers) {
-                requestBuilder = requestBuilder.header(header.getName(), header.getValue());
-            }
-
-            if (!method.equals(METHOD_GET)) {
-                RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));
-                requestBuilder.method(method, requestBody);
-            }
-
-            try (Response response = client.newCall(requestBuilder.build()).execute()) {
-                if (response.code() / 100 != 2) {
-                    LOGGER.warn("Cache: error response {} for url {}", response.code(), url);
-                }
-                if (response.code() == 503) {
-                    jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
-                } else if (response.code() / 100 == 5) {
-                    throw new IOException("Server error");
-                } else {
-                    long errors = jedis.decr(domainBlockKey);
-                    if (errors < 0) {
-                        jedis.set(domainBlockKey, "0");
-                    }
-                }
-                return new HttpResponse()
-                        .setCode(response.code())
-                        .setBody(response.body().string());
-            } catch (Throwable e) {
-                long errors = jedis.incr(domainBlockKey);
-                LOGGER.error("Web cache error ({} - {}; {} errors)", domain, e.getClass(), errors);
-                if (errors >= MAX_ERRORS) {
-                    jedis.set(domainOverloadKey, String.valueOf(System.currentTimeMillis()));
-                }
-                return new HttpResponse()
-                        .setCode(500);
-            } finally {
-                jedis.expire(domainBlockKey, Duration.ofMinutes(1).toSeconds());
-            }
-        } else {
+        if (DOMAIN_BLOCKER && (domainBlockCounter >= MAX_ERRORS || hostIsOverloaded(jedis, domainOverloadKey))) {
             return new HttpResponse()
                     .setCode(500);
         }
+
+        Request.Builder requestBuilder = new Request.Builder()
+                .url(url)
+                .addHeader("User-Agent", USER_AGENT);
+
+        for (HttpHeader header : headers) {
+            requestBuilder = requestBuilder.header(header.getName(), header.getValue());
+        }
+
+        if (!method.equals(METHOD_GET)) {
+            RequestBody requestBody = RequestBody.create(body, MediaType.get(contentType));
+            requestBuilder.method(method, requestBody);
+        }
+
+        try (Response response = client.newCall(requestBuilder.build()).execute()) {
+            if (response.code() / 100 != 2) {
+                LOGGER.warn("Cache: error response {} for url {}", response.code(), url);
+            }
+            if (response.code() == 503) {
+                jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
+            } else if (response.code() / 100 == 5) {
+                throw new IOException("Server error");
+            } else {
+                long errors = jedis.decr(domainBlockKey);
+                if (errors < 0) {
+                    jedis.set(domainBlockKey, "0");
+                }
+            }
+            return new HttpResponse()
+                    .setCode(response.code())
+                    .setBody(response.body().string());
+        } catch (Throwable e) {
+            long errors = jedis.incr(domainBlockKey);
+            LOGGER.error("Web cache error ({} - {}; {} errors)", domain, e.getClass(), errors);
+            if (errors >= MAX_ERRORS) {
+                jedis.set(domainOverloadKey, String.valueOf(System.currentTimeMillis()));
+            }
+            return new HttpResponse()
+                    .setCode(500);
+        } finally {
+            jedis.expire(domainBlockKey, Duration.ofMinutes(1).toSeconds());
+        }
     }
 
-    private boolean checkHostOverload(Jedis jedis, String domainOverloadKey) {
+    private boolean hostIsOverloaded(Jedis jedis, String domainOverloadKey) {
         String overloadTimeString = jedis.get(domainOverloadKey);
         long overloadTime = Optional.ofNullable(overloadTimeString).map(Long::parseLong).orElse(0L);
         double threshold = (double) (System.currentTimeMillis() - overloadTime - Duration.ofMinutes(1).toMillis()) / Duration.ofMinutes(9).toMillis();
-        return random.nextDouble() < threshold;
+        return random.nextDouble() >= threshold;
     }
 
     private String overrideProxyDomains(String url, Jedis jedis) {

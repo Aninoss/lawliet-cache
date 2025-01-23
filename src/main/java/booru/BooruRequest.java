@@ -17,6 +17,7 @@ public class BooruRequest {
     private List<String> strictFilters;
     private List<String> skippedResults;
     private boolean premium;
+    private int number;
 
     public BooruRequest setGuildId(long guildId) {
         this.guildId = guildId;
@@ -83,6 +84,11 @@ public class BooruRequest {
         return this;
     }
 
+    public BooruRequest setNumber(int number) {
+        this.number = number;
+        return this;
+    }
+
     public long getGuildId() {
         return guildId;
     }
@@ -133,6 +139,10 @@ public class BooruRequest {
 
     public boolean getPremium() {
         return premium;
+    }
+
+    public int getNumber() {
+        return number;
     }
 
 }

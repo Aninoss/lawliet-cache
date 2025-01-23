@@ -53,8 +53,8 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public BooruImage booru(BooruRequest booruRequest) throws BooruException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
-            return booruDownloader.getPicture(
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+            List<BooruImage> booruImages = booruDownloader.getImages(
                     booruRequest.getGuildId(),
                     booruRequest.getPremium(),
                     booruRequest.getDomain(),
@@ -65,7 +65,37 @@ public class RestService {
                     booruRequest.getFilters(),
                     booruRequest.getStrictFilters() != null ? booruRequest.getStrictFilters() : Collections.emptyList(),
                     booruRequest.getSkippedResults(),
-                    booruRequest.getTest()
+                    booruRequest.getTest(),
+                    1
+            );
+            return booruImages.isEmpty() ? null : booruImages.get(0);
+        } catch (Throwable e) {
+            if (e.getMessage() != null) {
+                LOGGER.error("Error in /booru", e);
+            }
+            throw e;
+        }
+    }
+
+    @POST
+    @Path("/booru_v2")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<BooruImage> booruV2(BooruRequest booruRequest) throws BooruException {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+            return booruDownloader.getImages(
+                    booruRequest.getGuildId(),
+                    booruRequest.getPremium(),
+                    booruRequest.getDomain(),
+                    booruRequest.getSearchTerm(),
+                    booruRequest.getAnimatedOnly(),
+                    booruRequest.getMustBeExplicit(),
+                    booruRequest.getCanBeVideo(),
+                    booruRequest.getFilters(),
+                    booruRequest.getStrictFilters() != null ? booruRequest.getStrictFilters() : Collections.emptyList(),
+                    booruRequest.getSkippedResults(),
+                    booruRequest.getTest(),
+                    booruRequest.getNumber()
             );
         } catch (Throwable e) {
             if (e.getMessage() != null) {
@@ -79,7 +109,7 @@ public class RestService {
     @Path("/booru_autocomplete/{domain}/{search}")
     @Produces(MediaType.APPLICATION_JSON)
     public List<BooruChoice> booruAutoComplete(@PathParam("domain") String domain, @PathParam("search") String search) throws BooruException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return booruDownloader.getTags(domain, search);
         } catch (Throwable e) {
             LOGGER.error("Error in /booru_autocomplete", e);
@@ -93,7 +123,7 @@ public class RestService {
     public RedditPost redditSingle(@PathParam("guild_id") long guildId, @PathParam("nsfw_allowed") boolean nsfwAllowed,
                                    @PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy
     ) throws RedditException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return redditDownloader.retrievePost(guildId, subreddit, orderBy, nsfwAllowed);
         } catch (Throwable e) {
             if (e.getMessage() != null) {
@@ -107,7 +137,7 @@ public class RestService {
     @Path("/reddit/bulk/{subreddit}/{order_by}")
     @Produces(MediaType.APPLICATION_JSON)
     public List<RedditPost> redditBulk(@PathParam("subreddit") String subreddit, @PathParam("order_by") String orderBy) throws RedditException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return redditDownloader.retrievePostsBulk(subreddit, orderBy);
         } catch (Throwable e) {
             if (e.getMessage() != null) {
@@ -122,7 +152,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public PixivImage pixivSingle(PixivRequest pixivRequest) throws PixivException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return pixivDownloader.retrieveImage(
                     pixivRequest.getGuildId(),
                     pixivRequest.getWord(),
@@ -143,7 +173,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public List<PixivImage> pixivBulk(PixivRequest pixivRequest) throws PixivException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return pixivDownloader.retrieveImagesBulk(
                     pixivRequest.getWord(),
                     pixivRequest.getFilters(),
@@ -161,7 +191,7 @@ public class RestService {
     @Path("/pixiv_autocomplete/{search}")
     @Produces(MediaType.APPLICATION_JSON)
     public List<PixivChoice> pixivAutoComplete(@PathParam("search") String search) throws BooruException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return pixivDownloader.getTags(search);
         } catch (Throwable e) {
             LOGGER.error("Error in /pixiv_autocomplete", e);
@@ -173,7 +203,7 @@ public class RestService {
     @Path("/twitch/{name}")
     @Produces(MediaType.APPLICATION_JSON)
     public TwitchStream redditBulk(@PathParam("name") String name) throws IOException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return twitchDownloader.retrieveStream(name);
         } catch (Throwable e) {
             LOGGER.error("Error in /twitch", e);
@@ -186,7 +216,7 @@ public class RestService {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public HttpResponse webcache(String url) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return webCache.get(url, 5);
         } catch (Throwable e) {
             LOGGER.error("Error in /webcache", e);
@@ -217,7 +247,7 @@ public class RestService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public Integer randomPicker(RandomPickerRequest randomPickerRequest) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             return randomPicker.pick(
                     randomPickerRequest.getTag(),
                     randomPickerRequest.getGuildId(),
@@ -230,7 +260,7 @@ public class RestService {
     }
 
     private Response requestCachedProxy(String method, String url, int minutes, String contentType, String body) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(60_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             HttpResponse httpResponse = webCache.request(method, url, body, contentType, minutes);
             if (httpResponse.getCode() / 100 == 2) {
                 return Response.ok(httpResponse.getBody()).build();
