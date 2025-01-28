@@ -61,7 +61,7 @@ public class BooruDownloader {
                 .build();
         this.webCache = webCache;
         this.booruTester = new BooruTester(webCache, jedisPool);
-        this.booruIdThresholdFinder = new BooruIdThresholdFinder(webCache, jedisPool);
+        this.booruIdThresholdFinder = new BooruIdThresholdFinder(client, jedisPool);
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
 
         int mediaServerMaxShards = Integer.parseInt(System.getenv("MS_MAX_SHARDS"));

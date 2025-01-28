@@ -3,7 +3,6 @@ package booru;
 import booru.autocomplete.*;
 import booru.counters.*;
 import booru.customboards.*;
-import booru.workaroundsearcher.RealbooruWorkaroundSearcher;
 import booru.workaroundsearcher.WorkaroundSearcher;
 import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
@@ -46,14 +45,14 @@ public enum BoardType {
     REALBOORU(
             "realbooru.com",
             "https://realbooru.com/index.php?page=post&s=view&id=",
-            42,
+            100,
             new RealbooruBoard(),
             RealbooruImage.class,
-            new RealbooruWorkaroundCounter(),
+            new RealbooruCounter(),
             -1,
             new DefaultAutoComplete("realbooru.com"),
             ImageBoard.ResponseFormat.JSON,
-            new RealbooruWorkaroundSearcher()
+            null
     ),
 
     E621(

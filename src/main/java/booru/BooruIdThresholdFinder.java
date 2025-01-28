@@ -1,7 +1,6 @@
 package booru;
 
 import core.Program;
-import core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import okhttp3.OkHttpClient;
@@ -26,10 +25,8 @@ public class BooruIdThresholdFinder {
     private final OkHttpClient client;
     private final JedisPool jedisPool;
 
-    public BooruIdThresholdFinder(WebCache webCache, JedisPool jedisPool) {
-        this.client = webCache.getClient().newBuilder()
-                .cache(null)
-                .build();
+    public BooruIdThresholdFinder(OkHttpClient client, JedisPool jedisPool) {
+        this.client = client;
         this.jedisPool = jedisPool;
 
         if (Program.isProductionMode()) {

@@ -5,6 +5,7 @@ import jakarta.inject.Singleton;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pixiv.*;
@@ -263,6 +264,10 @@ public class RestService {
         try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
             HttpResponse httpResponse = webCache.request(method, url, body, contentType, minutes);
             if (httpResponse.getCode() / 100 == 2) {
+                if (url.startsWith("https://realbooru.com/") && url.contains("&json=1")) {
+                    JSONObject jsonObject = new JSONObject(httpResponse.getBody());
+                    httpResponse.setBody(jsonObject.getJSONArray("post").toString());
+                }
                 return Response.ok(httpResponse.getBody()).build();
             } else {
                 return Response.status(httpResponse.getCode()).build();
