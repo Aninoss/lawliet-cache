@@ -18,7 +18,7 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
 
     @Override
     public List<? extends BoardImage> search(int page, String searchTerm, WebCache webCache) throws BooruException {
-        HttpResponse httpResponse = webCache.get("https://realbooru.com/index.php?page=post&s=list&tags=" + InternetUtil.escapeForURL(searchTerm), 30);
+        HttpResponse httpResponse = webCache.get("https://realbooru.com/index.php?page=post&s=list&pid=" + (page * 42) + "&tags=" + InternetUtil.escapeForURL(searchTerm), 30);
         if (httpResponse.getCode() / 100 != 2) {
             throw new BooruException();
         }

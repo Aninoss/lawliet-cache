@@ -46,7 +46,7 @@ public enum BoardType {
     REALBOORU(
             "realbooru.com",
             "https://realbooru.com/index.php?page=post&s=view&id=",
-            999,
+            42,
             new RealbooruBoard(),
             RealbooruImage.class,
             new RealbooruWorkaroundCounter(),
