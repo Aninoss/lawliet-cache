@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,11 +11,10 @@ import java.util.List;
 
 public class RealbooruImage implements BoardImage {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(RealbooruImage.class);
-
     private long id;
     private String directory;
-    private String image;
+    @JsonProperty("file_url")
+    private String fileUrl;
     private int height;
     private String tags;
     private int width;
@@ -26,15 +23,11 @@ public class RealbooruImage implements BoardImage {
     private long change; // timestamp in seconds
 
     public String getFileUrl() {
-        return "https://realbooru.com//images/" + directory + "/" + image;
+        return fileUrl;
     }
 
     public String getDirectory() {
         return directory;
-    }
-
-    public String getImage() {
-        return image;
     }
 
     @Override

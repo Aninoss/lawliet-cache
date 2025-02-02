@@ -1,9 +1,10 @@
 package core;
 
-import java.net.URI;
 import jakarta.ws.rs.core.UriBuilder;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+
+import java.net.URI;
 
 public class Main {
 
