@@ -38,7 +38,7 @@
             <onMismatch>DENY</onMismatch>
         </filter>
 
-        <filter class="core.ExceptionFilter"/>
+        <filter class="xyz.lawlietcache.core.ExceptionFilter"/>
 
         <target>System.err</target>
         <encoder>
