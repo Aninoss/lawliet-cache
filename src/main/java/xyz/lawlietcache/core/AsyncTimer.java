@@ -1,12 +1,13 @@
 package xyz.lawlietcache.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class AsyncTimer implements AutoCloseable {
 
@@ -21,7 +22,6 @@ public class AsyncTimer implements AutoCloseable {
         thread = Thread.currentThread();
         executorService.schedule(() -> {
             if (pending) {
-                LOGGER.error("Async timer interrupted: {}", thread.getName());
                 interrupt();
             }
         }, duration.toMillis(), TimeUnit.MILLISECONDS);

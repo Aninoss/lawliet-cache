@@ -30,6 +30,9 @@ public class DefaultAutoComplete implements BooruAutoComplete {
         ArrayList<BooruChoice> tags = new ArrayList<>();
         String url = "https://" + domain + "/autocomplete.php?q=" + URLEncoder.encode(search, StandardCharsets.UTF_8);
         String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes()).getBody();
+        if (data == null) {
+            return Collections.emptyList();
+        }
 
         JSONArray arrayJson;
         try {

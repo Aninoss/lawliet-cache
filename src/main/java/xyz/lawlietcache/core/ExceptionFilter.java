@@ -18,16 +18,13 @@ public class ExceptionFilter extends Filter<ILoggingEvent> {
             return FilterReply.NEUTRAL;
         }
 
-        if (!(throwableProxy instanceof ThrowableProxy)) {
+        if (!(throwableProxy instanceof ThrowableProxy throwableProxyImpl)) {
             return FilterReply.NEUTRAL;
         }
 
-        final ThrowableProxy throwableProxyImpl = (ThrowableProxy) throwableProxy;
         String message = throwableProxyImpl.getThrowable().toString();
-        if (message.contains("Broken pipe")) {
-            System.err.println("EXIT - Broken pipe");
-            System.exit(2);
-            return FilterReply.NEUTRAL;
+        if (message.contains("The current thread was interrupted")) {
+            return FilterReply.DENY;
         }
 
         return FilterReply.NEUTRAL;
