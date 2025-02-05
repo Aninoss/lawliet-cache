@@ -129,7 +129,7 @@ public class BooruDownloader {
                     .replaceAll(" {2,}", " ")
                     .toLowerCase();
             if (!canBeVideo) {
-                if (boardType == BoardType.E621 || boardType == BoardType.E926) {
+                if (boardType == BoardType.E621) {
                     searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
                 } else {
                     searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
@@ -169,7 +169,7 @@ public class BooruDownloader {
             finalSearchKeys.append(" -ugoira");
         }
         if (!canBeVideo) {
-            if (boardType == BoardType.E621 || boardType == BoardType.E926 || boardType == BoardType.RULE34_PAHEAL) {
+            if (boardType == BoardType.E621) {
                 finalSearchKeys.append(" -webm");
             } else {
                 finalSearchKeys.append(" -video");

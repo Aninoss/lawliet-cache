@@ -28,22 +28,12 @@ public abstract class FurryCounter implements Counter {
         }
 
         int posts = StringUtil.countMatches(data, "<article id=\"post_");
-        String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\">", "</menu></div>");
+        String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\" data-total=\"", "\"");
         if (groups.length == 0) {
             return -1;
         }
 
-        String paginator = groups[0];
-        String[] pageNumbers = StringUtil.extractGroups(paginator, ">", "<");
-
-        int pageMax = 0;
-        for (String pageNumber : pageNumbers) {
-            if (StringUtil.stringIsInt(pageNumber)) {
-                int n = Integer.parseInt(pageNumber);
-                pageMax = Math.max(n, pageMax);
-            }
-        }
-
+        int pageMax = Integer.parseInt(groups[0]);
         return pageMax == 1 ? posts : Math.max((pageMax - 1) * posts, 0);
     }
 

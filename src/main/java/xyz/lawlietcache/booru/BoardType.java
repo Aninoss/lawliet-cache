@@ -68,19 +68,6 @@ public enum BoardType {
             null
     ),
 
-    KONACHAN(
-            "konachan.com",
-            "https://konachan.com/post/show/",
-            999,
-            DefaultBoards.KONACHAN,
-            KonachanImage.class,
-            new KonachanCounter(),
-            6,
-            new EmptyAutoComplete(),
-            ImageBoard.ResponseFormat.JSON,
-            null
-    ),
-
     DANBOORU(
             "danbooru.donmai.us",
             "https://danbooru.donmai.us/posts/",
@@ -91,45 +78,6 @@ public enum BoardType {
             10,
             new DanbooruAutoComplete(),
             ImageBoard.ResponseFormat.JSON,
-            null
-    ),
-
-    GELBOORU(
-            "gelbooru.com",
-            "https://gelbooru.com/index.php?page=post&s=view&id=",
-            100,
-            DefaultBoards.GELBOORU,
-            GelbooruImage.class,
-            new GelbooruCounter(),
-            -1,
-            new GelbooruAutoComplete(),
-            ImageBoard.ResponseFormat.JSON,
-            null
-    ),
-
-    E926(
-            "e926.net",
-            "https://e926.net/posts/",
-            320,
-            DefaultBoards.E926,
-            FurryImage.class,
-            new E926Counter(),
-            40,
-            new FurryAutoComplete("e926.net"),
-            ImageBoard.ResponseFormat.JSON,
-            null
-    ),
-
-    RULE34_PAHEAL(
-            "rule34.paheal.net",
-            "https://rule34.paheal.net/post/view/",
-            100,
-            new Rule34PahealBoard(),
-            Rule34PahealImage.class,
-            new Rule34PahealCounter(),
-            3,
-            new Rule34PahealAutoComplete(),
-            ImageBoard.ResponseFormat.XML,
             null
     );
 

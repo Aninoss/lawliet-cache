@@ -28,6 +28,10 @@ public class Rule34PahealAutoComplete implements BooruAutoComplete {
 
         String url = "https://rule34.paheal.net/api/internal/autocomplete?s=" + URLEncoder.encode(search, StandardCharsets.UTF_8);
         String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes()).getBody();
+        if (data == null) {
+            return Collections.emptyList();
+        }
+
         try {
             return extractJson(new JSONObject(data)).stream()
                     .sorted((o1, o2) -> Integer.compare(o2.getValue(), o1.getValue()))
