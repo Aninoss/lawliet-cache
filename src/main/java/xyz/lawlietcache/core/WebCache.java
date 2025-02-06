@@ -95,10 +95,10 @@ public class WebCache {
                 }
 
                 HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-                if (httpResponse.getBody() != null && Program.isProductionMode()) {
+                if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && Program.isProductionMode()) {
                     writeHttpResponseToFile(key, httpResponse);
                     SetParams setParams = new SetParams();
-                    setParams.ex(httpResponse.getCode() / 100 != 5 ? Duration.ofMinutes(minutesCached).toSeconds() : 10);
+                    setParams.ex(Duration.ofMinutes(minutesCached).toSeconds());
                     jedis.set(keyBytes, new byte[0], setParams);
                 }
 

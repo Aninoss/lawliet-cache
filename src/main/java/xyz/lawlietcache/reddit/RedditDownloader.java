@@ -39,7 +39,7 @@ public class RedditDownloader {
     }
 
     public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean nsfwAllowed) throws RedditException {
-        int tries = 5;
+        int tries = 1;
         RedditPost redditPost;
         do {
             redditPost = retrievePostRaw(guildId, subreddit, orderBy, null, 0);
@@ -49,7 +49,7 @@ public class RedditDownloader {
     }
 
     public List<RedditPost> retrievePostsBulk(String subreddit, String orderBy) throws RedditException {
-        JSONArray postArrayJson = retrievePostArray(subreddit, orderBy, 25, null);
+        JSONArray postArrayJson = retrievePostArray(subreddit, orderBy, 100, null);
         if (postArrayJson == null) {
             return null;
         }

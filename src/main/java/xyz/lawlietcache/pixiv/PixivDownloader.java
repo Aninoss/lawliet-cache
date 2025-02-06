@@ -118,7 +118,7 @@ public class PixivDownloader {
             blockSet = jedis.hgetAll(REPORTS_KEY).keySet();
         }
 
-        int tries = 5;
+        int tries = 1;
         PixivImage pixivImage;
         do {
             pixivImage = retrieveImageRaw(guildId, word + " users入り", filters, strictFilters, blockSet, 0, true);
