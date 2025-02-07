@@ -45,7 +45,7 @@ public class WebCache {
         this.client = new OkHttpClient.Builder()
                 .connectionPool(connectionPool)
                 .dispatcher(dispatcher)
-                .callTimeout(10, TimeUnit.SECONDS)
+                .callTimeout(14, TimeUnit.SECONDS)
                 .cache(null)
                 .build();
     }

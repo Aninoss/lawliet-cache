@@ -57,7 +57,7 @@ public class ApiController {
 
     @PostMapping(value = "/booru_v2", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<BooruImage> booruV2(@RequestBody BooruRequest booruRequest) throws BooruException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return booruDownloader.getImages(
                     booruRequest.getGuildId(),
                     booruRequest.getPremium(),
@@ -78,7 +78,7 @@ public class ApiController {
     @GetMapping(value = "/booru_autocomplete/{domain}/{search}", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<BooruChoice> booruAutoComplete(@PathVariable("domain") String domain,
                                                @PathVariable("search") String search) throws BooruException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return booruDownloader.getTags(domain, search);
         }
     }
@@ -88,7 +88,7 @@ public class ApiController {
                                    @PathVariable("nsfw_allowed") boolean nsfwAllowed,
                                    @PathVariable("subreddit") String subreddit,
                                    @PathVariable("order_by") String orderBy) throws RedditException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return redditDownloader.retrievePost(guildId, subreddit, orderBy, nsfwAllowed);
         }
     }
@@ -96,14 +96,14 @@ public class ApiController {
     @GetMapping(value = "/reddit/bulk/{subreddit}/{order_by}", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<RedditPost> redditBulk(@PathVariable("subreddit") String subreddit,
                                        @PathVariable("order_by") String orderBy) throws RedditException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return redditDownloader.retrievePostsBulk(subreddit, orderBy);
         }
     }
 
     @PostMapping(value = "/pixiv_single", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public PixivImage pixivSingle(@RequestBody PixivRequest pixivRequest) throws PixivException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return pixivDownloader.retrieveImage(
                     pixivRequest.getGuildId(),
                     pixivRequest.getWord(),
@@ -116,7 +116,7 @@ public class ApiController {
 
     @PostMapping(value = "/pixiv_bulk", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<PixivImage> pixivBulk(@RequestBody PixivRequest pixivRequest) throws PixivException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return pixivDownloader.retrieveImagesBulk(
                     pixivRequest.getWord(),
                     pixivRequest.getFilters(),
@@ -127,21 +127,21 @@ public class ApiController {
 
     @GetMapping(value = "/pixiv_autocomplete/{search}", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<PixivChoice> pixivAutoComplete(@PathVariable("search") String search) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return pixivDownloader.getTags(search);
         }
     }
 
     @GetMapping(value = "/twitch/{name}", produces = MediaType.APPLICATION_JSON_VALUE)
     public TwitchStream twitch(@PathVariable("name") String name) throws IOException {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return twitchDownloader.retrieveStream(name);
         }
     }
 
     @PostMapping(value = "/webcache", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public HttpResponse webcache(@RequestBody String url) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             return webCache.get(url, 5);
         }
     }
@@ -162,7 +162,7 @@ public class ApiController {
 
     @PostMapping(value = "/random", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
     public String randomPicker(@RequestBody RandomPickerRequest randomPickerRequest) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             int number = randomPicker.pick(
                     randomPickerRequest.getTag(),
                     randomPickerRequest.getGuildId(),
@@ -173,7 +173,7 @@ public class ApiController {
     }
 
     private ResponseEntity<String> requestCachedProxy(String method, String url, int minutes, String contentType, String body) {
-        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(10_000))) {
+        try (AsyncTimer timer = new AsyncTimer(Duration.ofMillis(14_500))) {
             HttpResponse httpResponse = webCache.request(method, url, body, contentType, minutes);
             if (httpResponse.getCode() / 100 == 2) {
                 if (url.startsWith("https://realbooru.com/") && url.contains("&json=1")) {
