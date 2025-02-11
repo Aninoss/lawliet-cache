@@ -28,7 +28,7 @@ public abstract class FurryCounter implements Counter {
         }
 
         int posts = StringUtil.countMatches(data, "<article id=\"post_");
-        String[] groups = StringUtil.extractGroups(data, "<div class=\"paginator\" data-total=\"", "\"");
+        String[] groups = StringUtil.extractGroups(data, "data-total=\"", "\"");
         if (groups.length == 0) {
             return -1;
         }
