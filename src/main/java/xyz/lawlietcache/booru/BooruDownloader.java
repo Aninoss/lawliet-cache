@@ -36,6 +36,7 @@ public class BooruDownloader {
     private final static Logger LOGGER = LoggerFactory.getLogger(BooruDownloader.class);
     public static final String REPORTS_KEY = "reports";
     private static final int MAX_ALERT_REQUESTS_PER_SECOND = Integer.parseInt(System.getenv("MAX_BOORU_ALERT_REQUESTS_PER_SECOND"));
+    private static final boolean LOG_BLOCKED_BOORU_ALERT_REQUESTS = Boolean.parseBoolean(System.getenv("LOG_BLOCKED_BOORU_ALERT_REQUESTS"));
 
     private final BooruFilter booruFilter;
     private final OkHttpClient client;
@@ -76,7 +77,7 @@ public class BooruDownloader {
 
         Executors.newSingleThreadScheduledExecutor()
                 .scheduleAtFixedRate(() -> {
-                    if (alertRequestsThisSecond > MAX_ALERT_REQUESTS_PER_SECOND) {
+                    if (LOG_BLOCKED_BOORU_ALERT_REQUESTS && alertRequestsThisSecond > MAX_ALERT_REQUESTS_PER_SECOND) {
                         LOGGER.warn("Booru alert requests have been blocked! {} / {}", alertRequestsThisSecond, MAX_ALERT_REQUESTS_PER_SECOND);
                     }
                     alertRequestsThisSecond = 0;
