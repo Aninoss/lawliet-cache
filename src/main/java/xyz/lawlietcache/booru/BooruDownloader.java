@@ -113,13 +113,18 @@ public class BooruDownloader {
 
     public List<BooruImage> getImages(long guildId, boolean premium, String domain, String searchKeys, boolean animatedOnly,
                                       boolean mustBeExplicit, boolean canBeVideo, List<String> filters,
-                                      List<String> strictFilters, List<String> skippedResults, boolean test, int number) throws BooruException, SilentBooruException {
+                                      List<String> strictFilters, List<String> skippedResults, boolean test, int number) throws BooruException {
         BoardType boardType = BoardType.fromDomain(domain);
         if (boardType == null) {
             throw new BooruException("No image board for domain " + domain);
         }
         if (guildId <= 64 && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
             throw new ServiceRefusedException();
+        }
+        if (guildId > 64) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                jedis.hincrBy("booru_guild_ids", String.valueOf(guildId), 1);
+            }
         }
 
         if (test) {

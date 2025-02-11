@@ -38,14 +38,12 @@ public class BooruIdThresholdFinder {
                     params.nx();
                     String res = jedis.set(KEY_BOORU_ID_THRESHOLD_FINDER_LOCK, "true", params);
                     if ("OK".equals(res)) {
-                        try {
-                            schedulerTask();
-                        } catch (Throwable e) {
-                            LOGGER.error("Exception in scheduler task", e);
-                        }
+                        schedulerTask();
                     }
+                } catch (Throwable e) {
+                    LOGGER.error("Exception in scheduler task", e);
                 }
-            }, 0, 10, TimeUnit.SECONDS);
+            }, 0, 10, TimeUnit.MINUTES);
         }
     }
 

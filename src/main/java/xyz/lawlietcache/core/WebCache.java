@@ -116,6 +116,8 @@ public class WebCache {
 
     private HttpResponse requestWithoutCache(Jedis jedis, String method, String url, String body, String contentType, HttpHeader... headers) {
         String domain = url.split("/")[2];
+        jedis.hincrBy("http_domains", domain, 1);
+
         if (domain.equals("danbooru.donmai.us")) {
             url += String.format(
                     "&login=%s&api_key=%s",

@@ -19,8 +19,8 @@ public class JedisPoolManager {
 
     private JedisPoolConfig buildPoolConfig() {
         final JedisPoolConfig poolConfig = new JedisPoolConfig();
-        poolConfig.setMaxTotal(64);
-        poolConfig.setMaxIdle(64);
+        poolConfig.setMaxTotal(128);
+        poolConfig.setMaxIdle(128);
         poolConfig.setMinIdle(0);
         return poolConfig;
     }
