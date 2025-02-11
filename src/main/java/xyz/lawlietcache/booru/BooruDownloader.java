@@ -124,7 +124,7 @@ public class BooruDownloader {
         }
         if (guildId > 64) {
             try (Jedis jedis = jedisPool.getResource()) {
-                jedis.hincrBy("booru_guild_ids", String.valueOf(guildId), 1);
+                jedis.zincrby("booru_guild_set", 1, String.valueOf(guildId));
             }
         }
 
