@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.params.SetParams;
 import xyz.lawlietcache.util.SerializeUtil;
 
 import java.io.File;
@@ -15,7 +14,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -32,13 +34,12 @@ public class WebCache {
     public static final boolean DOMAIN_BLOCKER = Boolean.parseBoolean(System.getenv("DOMAIN_BLOCKER"));
 
     private final JedisPool jedisPool;
-    private final LockManager lockManager;
     private final OkHttpClient client;
     private final Random random = new Random();
 
-    public WebCache(JedisPoolManager jedisPoolManager, LockManager lockManager) {
+    public WebCache(JedisPoolManager jedisPoolManager) {
         this.jedisPool = jedisPoolManager.get();
-        this.lockManager = lockManager;
+
         Dispatcher dispatcher = new Dispatcher();
         dispatcher.setMaxRequestsPerHost(25);
         ConnectionPool connectionPool = new ConnectionPool(5, 10, TimeUnit.SECONDS);
@@ -74,37 +75,28 @@ public class WebCache {
             key = "webresponse:" + method + ":" + url.hashCode() + ":" + body.hashCode() + ":" + contentType.hashCode();
         }
 
-        Object lock = lockManager.get(key);
-        synchronized (lock) {
-            try (Jedis jedis = jedisPool.getResource()) {
-                byte[] keyBytes = key.getBytes();
-                byte[] payloadBytes = jedis.get(keyBytes);
-
-                if (payloadBytes != null) {
-                    try {
-                        HttpResponse httpResponse = payloadBytes.length > 0
-                                ? (HttpResponse) SerializeUtil.unserialize(payloadBytes)
-                                : readHttpResponseFromFile(key);
-                        if (httpResponse != null && httpResponse.getBody() != null && Program.isProductionMode()) {
-                            fromCache.set(true);
-                            return httpResponse;
-                        }
-                    } catch (Throwable e) {
-                        LOGGER.error("Web cache exception", e);
-                    }
+        try (Jedis jedis = jedisPool.getResource();
+             RedisLock lock = new RedisLock(jedis, key)
+        ) {
+            try {
+                HttpResponse httpResponse = readHttpResponseFromFile(key, minutesCached);
+                if (httpResponse != null && Program.isProductionMode()) {
+                    fromCache.set(true);
+                    return httpResponse;
                 }
-
-                HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-                if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && Program.isProductionMode()) {
-                    writeHttpResponseToFile(key, httpResponse);
-                    SetParams setParams = new SetParams();
-                    setParams.ex(Duration.ofMinutes(minutesCached).toSeconds());
-                    jedis.set(keyBytes, new byte[0], setParams);
-                }
-
-                fromCache.set(false);
-                return httpResponse;
+            } catch (Throwable e) {
+                LOGGER.error("Web cache exception", e);
             }
+
+            HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
+            if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && Program.isProductionMode()) {
+                writeHttpResponseToFile(key, httpResponse);
+            }
+
+            fromCache.set(false);
+            return httpResponse;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -237,13 +229,21 @@ public class WebCache {
         }
     }
 
-    private HttpResponse readHttpResponseFromFile(String key) {
+    private HttpResponse readHttpResponseFromFile(String key, int minutesCached) {
         String filePath = System.getenv("WEBCACHE_ROOT_PATH") + "/" + key.replace(":", "_");
         File file = new File(filePath);
-
         if (!file.exists()) {
-            LOGGER.error("Could not find file {}", filePath);
             return null;
+        }
+
+        try {
+            BasicFileAttributes attr = Files.readAttributes(file.toPath(), BasicFileAttributes.class);
+            Instant modifiedTime = attr.lastModifiedTime().toInstant();
+            if (modifiedTime.isBefore(Instant.now().minus(Duration.ofMinutes(minutesCached)))) {
+                return null;
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         try (FileInputStream inputStream = new FileInputStream(file)) {
