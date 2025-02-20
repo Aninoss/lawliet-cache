@@ -1,16 +1,25 @@
 package xyz.lawlietcache.booru;
 
-import xyz.lawlietcache.booru.autocomplete.*;
-import xyz.lawlietcache.booru.counters.*;
-import xyz.lawlietcache.booru.customboards.*;
-import xyz.lawlietcache.booru.workaroundsearcher.WorkaroundSearcher;
-import xyz.lawlietcache.core.WebCache;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
-import net.kodehawa.lib.imageboards.entities.impl.*;
+import net.kodehawa.lib.imageboards.entities.impl.DanbooruImage;
+import net.kodehawa.lib.imageboards.entities.impl.FurryImage;
+import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
+import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
 import redis.clients.jedis.JedisPool;
+import xyz.lawlietcache.booru.autocomplete.BooruAutoComplete;
+import xyz.lawlietcache.booru.autocomplete.DanbooruAutoComplete;
+import xyz.lawlietcache.booru.autocomplete.DefaultAutoComplete;
+import xyz.lawlietcache.booru.autocomplete.FurryAutoComplete;
+import xyz.lawlietcache.booru.counters.*;
+import xyz.lawlietcache.booru.customboards.RealbooruBoard;
+import xyz.lawlietcache.booru.customboards.RealbooruImage;
+import xyz.lawlietcache.booru.customboards.Rule34Board;
+import xyz.lawlietcache.booru.workaroundsearcher.RealbooruWorkaroundSearcher;
+import xyz.lawlietcache.booru.workaroundsearcher.WorkaroundSearcher;
+import xyz.lawlietcache.core.WebCache;
 
 import java.util.List;
 
@@ -45,14 +54,14 @@ public enum BoardType {
     REALBOORU(
             "realbooru.com",
             "https://realbooru.com/index.php?page=post&s=view&id=",
-            100,
+            42,
             new RealbooruBoard(),
             RealbooruImage.class,
-            new RealbooruCounter(),
+            new RealbooruWorkaroundCounter(),
             -1,
             new DefaultAutoComplete("realbooru.com"),
             ImageBoard.ResponseFormat.JSON,
-            null
+            new RealbooruWorkaroundSearcher()
     ),
 
     E621(
