@@ -12,12 +12,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -41,13 +44,21 @@ public class WebCache {
         this.jedisPool = jedisPoolManager.get();
 
         Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequestsPerHost(25);
-        ConnectionPool connectionPool = new ConnectionPool(5, 10, TimeUnit.SECONDS);
+        dispatcher.setMaxRequests(400);
+        dispatcher.setMaxRequestsPerHost(100);
+        ConnectionPool connectionPool = new ConnectionPool(100, 5, TimeUnit.MINUTES);
+        Dns dns = hostname -> Arrays.asList(InetAddress.getAllByName(hostname));
+
         this.client = new OkHttpClient.Builder()
+                .dns(dns)
                 .connectionPool(connectionPool)
                 .dispatcher(dispatcher)
                 .callTimeout(14, TimeUnit.SECONDS)
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .writeTimeout(10, TimeUnit.SECONDS)
                 .cache(null)
+                .protocols(List.of(Protocol.HTTP_1_1))
                 .build();
     }
 
