@@ -151,8 +151,18 @@ public class BooruDownloader {
                                  boolean mustBeExplicit, boolean canBeVideo, int remaining, boolean softMode,
                                  List<String> filters, List<String> strictFilters, List<String> skippedResults, int number
     ) throws BooruException {
-        StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
-        List<String> visibleSearchKeysList = extractTags(finalSearchKeys.toString());
+        List<String> visibleSearchKeysList;
+        StringBuilder finalSearchKeys;
+
+        if (softMode) {
+            visibleSearchKeysList = extractTags(searchKeys).stream()
+                    .map(tag -> tag.startsWith("(") ? tag : (tag + "~"))
+                    .toList();
+            finalSearchKeys = new StringBuilder(String.join(" ", visibleSearchKeysList));
+        } else {
+            visibleSearchKeysList = extractTags(searchKeys);
+            finalSearchKeys = new StringBuilder(searchKeys);
+        }
 
         if (boardType.getMaxTags() < 0) {
             for (String filter : filters) {
@@ -164,12 +174,10 @@ public class BooruDownloader {
             if (mustBeExplicit) {
                 finalSearchKeys.append(" rating:explicit");
             }
-        }
-
-        if (boardType.getMaxTags() >= 0) {
+        } else {
             int reduce = 1 + (boardType == BoardType.DANBOORU ? 1 : 0) + (!canBeVideo ? 1 : 0);
             finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - reduce));
-            visibleSearchKeysList = visibleSearchKeysList.subList(0, Math.min(visibleSearchKeysList.size(), boardType.getMaxTags() - reduce));
+            visibleSearchKeysList = extractTags(finalSearchKeys.toString());
         }
         if (boardType == BoardType.DANBOORU) {
             finalSearchKeys.append(" -ugoira");
@@ -191,7 +199,7 @@ public class BooruDownloader {
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeysString, true));
         if (count == 0) {
             if (!softMode) {
-                return getImages(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, strictFilters, skippedResults, number);
+                return getImages(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, strictFilters, skippedResults, number);
             } else if (remaining > 0) {
                 if (searchKeys.contains(" ")) {
                     return getImages(guildId, boardType, searchKeys.replace(" ", "_"), animatedOnly, mustBeExplicit, canBeVideo, remaining - 1, false, filters, strictFilters, skippedResults, number);
