@@ -152,7 +152,7 @@ public class BooruDownloader {
                                  List<String> filters, List<String> strictFilters, List<String> skippedResults, int number
     ) throws BooruException {
         StringBuilder finalSearchKeys = new StringBuilder(softMode ? (searchKeys.replace(" ", "~ ") + "~") : searchKeys);
-        List<String> visibleSearchKeysList = List.of(finalSearchKeys.toString().split(" "));
+        List<String> visibleSearchKeysList = extractTags(finalSearchKeys.toString());
 
         if (boardType.getMaxTags() < 0) {
             for (String filter : filters) {
@@ -373,6 +373,45 @@ public class BooruDownloader {
                 .setScore(image.getScore())
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
                 .setTags(usedSearchKeys);
+    }
+
+    private static List<String> extractTags(String input) {
+        List<String> tags = new ArrayList<>();
+        StringBuilder currentToken = new StringBuilder();
+        boolean inBracket = false;
+
+        for (char c : input.toCharArray()) {
+            if (inBracket) {
+                currentToken.append(c);
+                if (c == ')') {
+                    tags.add(currentToken.toString());
+                    currentToken.setLength(0);
+                    inBracket = false;
+                }
+            } else {
+                if (c == ' ') {
+                    if (!currentToken.isEmpty()) {
+                        tags.add(currentToken.toString());
+                        currentToken.setLength(0);
+                    }
+                } else if (c == '(') {
+                    if (!currentToken.isEmpty()) {
+                        tags.add(currentToken.toString());
+                        currentToken.setLength(0);
+                    }
+                    currentToken.append(c);
+                    inBracket = true;
+                } else {
+                    currentToken.append(c);
+                }
+            }
+        }
+
+        if (!currentToken.isEmpty()) {
+            tags.add(currentToken.toString());
+        }
+
+        return tags;
     }
 
     private int getShard(String dir, String id) {
