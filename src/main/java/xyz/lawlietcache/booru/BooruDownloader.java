@@ -119,7 +119,7 @@ public class BooruDownloader {
         if (boardType == null) {
             throw new BooruException("No image board for domain " + domain);
         }
-        if (guildId <= 64 && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
+        if (guildId <= 64 && boardType == BoardType.E621 && alertRequestsThisSecond++ >= MAX_ALERT_REQUESTS_PER_SECOND) {
             throw new ServiceRefusedException();
         }
         if (guildId > 64) {
