@@ -70,7 +70,8 @@ public class ApiController {
                     booruRequest.getStrictFilters() != null ? booruRequest.getStrictFilters() : Collections.emptyList(),
                     booruRequest.getSkippedResults(),
                     booruRequest.getTest(),
-                    booruRequest.getNumber()
+                    booruRequest.getNumber(),
+                    booruRequest.getBulkMode()
             );
         }
     }

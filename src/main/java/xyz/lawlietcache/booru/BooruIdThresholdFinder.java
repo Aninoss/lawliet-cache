@@ -1,6 +1,5 @@
 package xyz.lawlietcache.booru;
 
-import xyz.lawlietcache.core.Program;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import okhttp3.OkHttpClient;
@@ -9,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.params.SetParams;
+import xyz.lawlietcache.core.Program;
+import xyz.lawlietcache.core.WebCache;
 
 import java.time.Duration;
 import java.util.List;
@@ -24,27 +25,27 @@ public class BooruIdThresholdFinder {
 
     private final OkHttpClient client;
     private final JedisPool jedisPool;
+    private final WebCache webCache;
 
-    public BooruIdThresholdFinder(OkHttpClient client, JedisPool jedisPool) {
+    public BooruIdThresholdFinder(OkHttpClient client, JedisPool jedisPool, WebCache webCache) {
         this.client = client;
         this.jedisPool = jedisPool;
+        this.webCache = webCache;
 
-        if (Program.isProductionMode()) {
-            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-            scheduler.scheduleAtFixedRate(() -> {
-                try (Jedis jedis = jedisPool.getResource()) {
-                    SetParams params = new SetParams();
-                    params.ex(Duration.ofHours(1).toSeconds());
-                    params.nx();
-                    String res = jedis.set(KEY_BOORU_ID_THRESHOLD_FINDER_LOCK, "true", params);
-                    if ("OK".equals(res)) {
-                        schedulerTask();
-                    }
-                } catch (Throwable e) {
-                    LOGGER.error("Exception in scheduler task", e);
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> {
+            try (Jedis jedis = jedisPool.getResource()) {
+                SetParams params = new SetParams();
+                params.ex(Duration.ofMinutes(15).toSeconds());
+                params.nx();
+                String res = jedis.set(KEY_BOORU_ID_THRESHOLD_FINDER_LOCK, "true", params);
+                if (!Program.isProductionMode() || "OK".equals(res)) {
+                    schedulerTask();
                 }
-            }, 0, 10, TimeUnit.MINUTES);
-        }
+            } catch (Throwable e) {
+                LOGGER.error("Exception in scheduler task", e);
+            }
+        }, 1, 5, TimeUnit.MINUTES);
     }
 
     private void schedulerTask() {
@@ -70,8 +71,13 @@ public class BooruIdThresholdFinder {
 
         try {
             for (int page = 0; page < 250; page += 5) {
-                List<? extends BoardImage> images = imageBoard.search(page, boardType.getMaxLimit(), "")
-                        .blocking();
+                List<? extends BoardImage> images;
+                if (boardType.getWorkaroundSearcher() != null) {
+                    images = boardType.getWorkaroundSearcher().search(page, "", webCache);
+                } else {
+                    images = imageBoard.search(page, boardType.getMaxLimit(), "")
+                            .blocking();
+                }
                 long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
 
                 for (BoardImage image : images) {
@@ -82,7 +88,7 @@ public class BooruIdThresholdFinder {
             }
             return null;
         } catch (Throwable e) {
-            //ignore
+            LOGGER.error("Exception", e);
             return null;
         }
     }
@@ -93,8 +99,13 @@ public class BooruIdThresholdFinder {
 
         try {
             for (int page = Math.max(0, pageEstimate - 4); page <= pageEstimate; page++) {
-                List<? extends BoardImage> images = imageBoard.search(page, boardType.getMaxLimit(), "")
-                        .blocking();
+                List<? extends BoardImage> images;
+                if (boardType.getWorkaroundSearcher() != null) {
+                    images = boardType.getWorkaroundSearcher().search(page, "", webCache);
+                } else {
+                    images = imageBoard.search(page, boardType.getMaxLimit(), "")
+                            .blocking();
+                }
                 long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
 
                 for (BoardImage image : images) {
@@ -105,7 +116,7 @@ public class BooruIdThresholdFinder {
             }
             return null;
         } catch (Throwable e) {
-            //ignore
+            LOGGER.error("Exception", e);
             return null;
         }
     }
