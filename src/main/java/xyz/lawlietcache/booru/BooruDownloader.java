@@ -185,10 +185,10 @@ public class BooruDownloader {
             finalSearchKeys.append(" -ugoira");
         }
         if (!canBeVideo) {
-            if (boardType == BoardType.E621) {
-                finalSearchKeys.append(" -webm");
-            } else {
-                finalSearchKeys.append(" -video");
+            switch (boardType) {
+                case E621 -> finalSearchKeys.append(" -webm");
+                case REALBOORU -> finalSearchKeys.append(" -webm -video");
+                default -> finalSearchKeys.append(" -video");
             }
         }
 
@@ -293,7 +293,7 @@ public class BooruDownloader {
                 }
 
                 if (!Program.isProductionMode()) {
-                    if (!animatedOnly || contentType.isAnimated()) passingRestrictions[0]++;
+                    if (!animatedOnly || contentType.isAnimated() || boardType == BoardType.REALBOORU) passingRestrictions[0]++;
                     if (!contentType.isVideo() || canBeVideo) passingRestrictions[1]++;
                     if (score >= 0) passingRestrictions[2]++;
                     if (!NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters)) passingRestrictions[3]++;
@@ -303,7 +303,7 @@ public class BooruDownloader {
                     if (!blocked) passingRestrictions[7]++;
                 }
 
-                if ((!animatedOnly || contentType.isAnimated()) &&
+                if ((!animatedOnly || contentType.isAnimated() || boardType == BoardType.REALBOORU) &&
                         (!contentType.isVideo() || canBeVideo) &&
                         score >= 0 &&
                         !NSFWUtil.containsFilterTags(boardImage.getTags(), filters, strictFilters) &&
@@ -325,7 +325,12 @@ public class BooruDownloader {
         if (bulkMode) {
             return pornImages.stream()
                     .map(pornImage -> createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), usedSearchKeys))
-                    .limit(50)
+                    .limit(boardType.getWorkaroundSearcher() == null ? 50 : 5)
+                    .peek(booruImage -> {
+                        if (boardType.getWorkaroundSearcher() != null) {
+                            boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
+                        }
+                    })
                     .toList();
         }
 
