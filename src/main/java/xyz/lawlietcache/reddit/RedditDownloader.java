@@ -38,14 +38,8 @@ public class RedditDownloader {
         this.jedisPool = jedisPoolManager.get();
     }
 
-    public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean nsfwAllowed) throws RedditException {
-        int tries = 1;
-        RedditPost redditPost;
-        do {
-            redditPost = retrievePostRaw(guildId, subreddit, orderBy, null, 0);
-        } while (--tries > 0 && !nsfwAllowed && (redditPost != null && redditPost.isNsfw()));
-
-        return redditPost;
+    public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean allowNsfw) throws RedditException {
+        return retrievePostRaw(guildId, subreddit, orderBy, null, allowNsfw, 0);
     }
 
     public List<RedditPost> retrievePostsBulk(String subreddit, String orderBy) throws RedditException {
@@ -62,32 +56,42 @@ public class RedditDownloader {
         return postList;
     }
 
-    private RedditPost retrievePostRaw(long guildId, String subreddit, String orderBy, String after, int page) throws RedditException {
+    private RedditPost retrievePostRaw(long guildId, String subreddit, String orderBy, String after, boolean allowNsfw, int page) throws RedditException {
         JSONArray postArrayJson = retrievePostArray(subreddit, orderBy, 100, after);
         RedditCache redditCache = new RedditCache(jedisPool, guildId, subreddit, orderBy);
         if (postArrayJson == null) {
             if (page > 0) {
                 redditCache.removeFirst();
-                return retrievePostRaw(guildId, subreddit, orderBy, null, 0);
+                return retrievePostRaw(guildId, subreddit, orderBy, null, allowNsfw, 0);
             } else {
                 return null;
             }
         }
 
-        JSONArray filteredPostArrayJson = redditCache.filter(postArrayJson);
-        if (filteredPostArrayJson.isEmpty()) {
+        List<RedditPost> postList = new ArrayList<>();
+        for (int i = 0; i < postArrayJson.length(); i++) {
+            RedditPost post = extractPost(postArrayJson.getJSONObject(i).getJSONObject("data"));
+            postList.add(post);
+        }
+
+        if (!allowNsfw && postList.stream().allMatch(RedditPost::isNsfw)) {
+            return postList.get(0);
+        }
+        redditCache.filter(postList);
+        postList.removeIf(redditPost -> !allowNsfw && redditPost.isNsfw());
+
+        if (postList.isEmpty()) {
             if (page < MAX_PAGE) {
                 String newAfter = postArrayJson.getJSONObject(postArrayJson.length() - 1)
                         .getJSONObject("data")
                         .getString("name");
-                return retrievePostRaw(guildId, subreddit, orderBy, newAfter, page + 1);
+                return retrievePostRaw(guildId, subreddit, orderBy, newAfter, allowNsfw, page + 1);
             } else {
                 redditCache.removeFirst();
-                return retrievePostRaw(guildId, subreddit, orderBy, null, 0);
+                return retrievePostRaw(guildId, subreddit, orderBy, null, allowNsfw, 0);
             }
         } else {
-            JSONObject dataJson = filteredPostArrayJson.getJSONObject(0).getJSONObject("data");
-            RedditPost redditPost = extractPost(dataJson);
+            RedditPost redditPost = postList.get(0);
             redditCache.add(redditPost.getId());
             return redditPost;
         }

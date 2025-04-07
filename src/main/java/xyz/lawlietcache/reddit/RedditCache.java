@@ -1,11 +1,11 @@
 package xyz.lawlietcache.reddit;
 
-import java.time.Duration;
-import java.util.HashSet;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.time.Duration;
+import java.util.Collection;
+import java.util.HashSet;
 
 public class RedditCache {
 
@@ -21,19 +21,10 @@ public class RedditCache {
         this.orderBy = orderBy;
     }
 
-    public JSONArray filter(JSONArray postArrayJson) {
+    public void filter(Collection<RedditPost> postList) {
         try (Jedis jedis = jedisPool.getResource()) {
-            JSONArray newPostArrayJson = new JSONArray();
             HashSet<String> usedPostIds = new HashSet<>(jedis.lrange(getKey(), 0, -1));
-            for (int i = 0; i < postArrayJson.length(); i++) {
-                JSONObject postJson = postArrayJson.getJSONObject(i);
-                JSONObject dataJson = postJson.getJSONObject("data");
-                String id = dataJson.getString("name");
-                if (!usedPostIds.contains(id)) {
-                    newPostArrayJson.put(postJson);
-                }
-            }
-            return newPostArrayJson;
+            postList.removeIf(post -> usedPostIds.contains(post.getId()));
         }
     }
 
