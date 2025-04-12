@@ -1,13 +1,15 @@
 package xyz.lawlietcache.booru.workaroundsearcher;
 
-import xyz.lawlietcache.booru.exception.BooruException;
+import net.kodehawa.lib.imageboards.entities.BoardImage;
+import net.kodehawa.lib.imageboards.entities.Rating;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import xyz.lawlietcache.booru.BooruImage;
 import xyz.lawlietcache.booru.customboards.CustomImage;
+import xyz.lawlietcache.booru.exception.BooruException;
 import xyz.lawlietcache.booru.exception.SilentBooruException;
 import xyz.lawlietcache.core.HttpResponse;
 import xyz.lawlietcache.core.WebCache;
-import net.kodehawa.lib.imageboards.entities.BoardImage;
-import net.kodehawa.lib.imageboards.entities.Rating;
 import xyz.lawlietcache.util.InternetUtil;
 import xyz.lawlietcache.util.StringUtil;
 
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(RealbooruWorkaroundSearcher.class);
 
     @Override
     public List<? extends BoardImage> search(int page, String searchTerm, WebCache webCache) throws BooruException {
@@ -45,8 +49,17 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
             return;
         }
 
-        String uri = StringUtil.extractGroups(httpResponse.getBody(), "https://realbooru.com//images/", "\"")[0];
-        booruImage.setImageUrl("https://realbooru.com//images/" + uri);
+        try {
+            String uri;
+            if (httpResponse.getBody().contains("https://realbooru.com//images/")) {
+                uri = StringUtil.extractGroups(httpResponse.getBody(), "https://realbooru.com//images/", "\"")[0].replace(".webm", ".mp4");
+            } else  {
+                uri = StringUtil.extractGroups(httpResponse.getBody(), "https://video-cdn.realbooru.com//images/", "\"")[0].replace(".webm", ".mp4");
+            }
+            booruImage.setImageUrl("https://realbooru.com//images/" + uri);
+        } catch (Throwable e) {
+            LOGGER.error("Realbooru workaround post process exception:\n{}", httpResponse.getBody(), e);
+        }
     }
 
     private CustomImage htmlToBoardImage(String html) {

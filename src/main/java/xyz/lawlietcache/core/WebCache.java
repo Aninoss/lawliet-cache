@@ -44,8 +44,8 @@ public class WebCache {
         this.jedisPool = jedisPoolManager.get();
 
         Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequests(400);
-        dispatcher.setMaxRequestsPerHost(100);
+        dispatcher.setMaxRequests(999);
+        dispatcher.setMaxRequestsPerHost(999);
         ConnectionPool connectionPool = new ConnectionPool(100, 5, TimeUnit.MINUTES);
         Dns dns = hostname -> Arrays.asList(InetAddress.getAllByName(hostname));
 
@@ -53,10 +53,10 @@ public class WebCache {
                 .dns(dns)
                 .connectionPool(connectionPool)
                 .dispatcher(dispatcher)
-                .callTimeout(14, TimeUnit.SECONDS)
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
-                .writeTimeout(10, TimeUnit.SECONDS)
+                .callTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
                 .cache(null)
                 .protocols(List.of(Protocol.HTTP_1_1))
                 .build();
