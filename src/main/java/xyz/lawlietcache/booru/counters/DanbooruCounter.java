@@ -35,14 +35,14 @@ public class DanbooruCounter implements Counter {
         try {
             json = new JSONObject(data).getJSONObject("counts");
         } catch (JSONException | NullPointerException e) {
-            LOGGER.error("Danbooru invalid counter response: {}", data);
+            LOGGER.error("Danbooru invalid counter response: {}", url);
             return -1;
         }
 
         if (json.has("posts") && !json.isNull("posts")) {
             return json.getInt("posts");
         } else {
-            LOGGER.error("Danbooru no post count for \"{}\"", tags);
+            LOGGER.error("Danbooru no post count: {}", url);
             return -1;
         }
     }
