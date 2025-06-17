@@ -171,9 +171,13 @@ public class WebCache {
                     jedis.set(domainBlockKey, "0");
                 }
             }
-            return new HttpResponse()
+            HttpResponse httpResponse = new HttpResponse()
                     .setCode(response.code())
                     .setBody(response.body().string());
+            if (url.contains("debug_request")) {
+                LOGGER.info("Data for url {} ({}):\n{}", url, httpResponse.getCode(), httpResponse.getBody());
+            }
+            return httpResponse;
         } catch (Throwable e) {
             long errors = jedis.incr(domainBlockKey);
             LOGGER.error("Web cache error ({} - {}; {} errors)", domain, e.getClass(), errors);
