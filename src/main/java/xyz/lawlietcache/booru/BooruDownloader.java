@@ -399,14 +399,19 @@ public class BooruDownloader {
     }
 
     private static List<String> extractTags(String input) {
+        char GROUP_START = (char) 2;
+        char GROUP_END = (char) 3;
+
         List<String> tags = new ArrayList<>();
         StringBuilder currentToken = new StringBuilder();
         boolean inBracket = false;
+        input = input.replace("( ", String.valueOf(GROUP_START))
+                .replace(" )", String.valueOf(GROUP_END));
 
         for (char c : input.toCharArray()) {
             if (inBracket) {
                 currentToken.append(c);
-                if (c == ')') {
+                if (c == GROUP_END) {
                     tags.add(currentToken.toString());
                     currentToken.setLength(0);
                     inBracket = false;
@@ -417,7 +422,7 @@ public class BooruDownloader {
                         tags.add(currentToken.toString());
                         currentToken.setLength(0);
                     }
-                } else if (c == '(') {
+                } else if (c == GROUP_START) {
                     if (!currentToken.isEmpty()) {
                         tags.add(currentToken.toString());
                         currentToken.setLength(0);
@@ -434,7 +439,10 @@ public class BooruDownloader {
             tags.add(currentToken.toString());
         }
 
-        return tags;
+        return tags.stream()
+                .map(tag -> tag.replace(String.valueOf(GROUP_START), "( ")
+                        .replace(String.valueOf(GROUP_END), " )"))
+                .collect(Collectors.toList());
     }
 
     private int getShard(String dir, String id) {
