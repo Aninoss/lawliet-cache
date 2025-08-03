@@ -32,20 +32,22 @@ public class BooruIdThresholdFinder {
         this.jedisPool = jedisPool;
         this.webCache = webCache;
 
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
-            try (Jedis jedis = jedisPool.getResource()) {
-                SetParams params = new SetParams();
-                params.ex(Duration.ofMinutes(15).toSeconds());
-                params.nx();
-                String res = jedis.set(KEY_BOORU_ID_THRESHOLD_FINDER_LOCK, "true", params);
-                if (!Program.isProductionMode() || "OK".equals(res)) {
-                    schedulerTask();
+        if (Program.isProductionMode()) {
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+            scheduler.scheduleAtFixedRate(() -> {
+                try (Jedis jedis = jedisPool.getResource()) {
+                    SetParams params = new SetParams();
+                    params.ex(Duration.ofMinutes(15).toSeconds());
+                    params.nx();
+                    String res = jedis.set(KEY_BOORU_ID_THRESHOLD_FINDER_LOCK, "true", params);
+                    if (!Program.isProductionMode() || "OK".equals(res)) {
+                        schedulerTask();
+                    }
+                } catch (Throwable e) {
+                    LOGGER.error("Exception in scheduler task", e);
                 }
-            } catch (Throwable e) {
-                LOGGER.error("Exception in scheduler task", e);
-            }
-        }, 1, 5, TimeUnit.MINUTES);
+            }, 1, 5, TimeUnit.MINUTES);
+        }
     }
 
     private void schedulerTask() {

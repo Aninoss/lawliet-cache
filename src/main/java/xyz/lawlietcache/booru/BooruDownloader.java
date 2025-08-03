@@ -395,7 +395,8 @@ public class BooruDownloader {
                 .setPageUrl(pageUrl)
                 .setScore(image.getScore())
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
-                .setTags(usedSearchKeys);
+                .setTags(usedSearchKeys)
+                .setImageTags(image.getTags());
     }
 
     private static List<String> extractTags(String input) {
