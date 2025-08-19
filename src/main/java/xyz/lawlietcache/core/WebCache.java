@@ -121,12 +121,21 @@ public class WebCache {
         String domain = url.split("/")[2];
         jedis.hincrBy("http_domains", domain, 1);
 
-        if (domain.equals("danbooru.donmai.us")) {
-            url += String.format(
-                    "&login=%s&api_key=%s",
-                    System.getenv("DANBOORU_LOGIN"),
-                    System.getenv("DANBOORU_API_TOKEN")
-            );
+        switch (domain) {
+            case "danbooru.donmai.us" -> {
+                url += String.format(
+                        "&login=%s&api_key=%s",
+                        System.getenv("DANBOORU_LOGIN"),
+                        System.getenv("DANBOORU_API_TOKEN")
+                );
+            }
+            case "api.rule34.xxx" -> {
+                url += String.format(
+                        "&api_key=%s&user_id=%s",
+                        System.getenv("RULE34_API_KEY"),
+                        System.getenv("RULE34_USER_ID")
+                );
+            }
         }
         url = overrideProxyDomains(url, jedis);
 
