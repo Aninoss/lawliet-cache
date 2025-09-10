@@ -358,7 +358,11 @@ public class BooruDownloader {
         String originalImageUrl = imageUrl;
         String pageUrl = boardType.getPageUrl(image.getId());
         try (Jedis jedis = jedisPool.getResource()) {
-            if (contentType.isVideo()) {
+            if (boardType == BoardType.DANBOORU && originalImageUrl.endsWith(".gif")) {
+                String[] parts = imageUrl.split("/");
+                int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                imageUrl = danbooruAnimatedGifUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+            } else if (contentType.isVideo()) {
                 switch (boardType) {
                     case RULE34 -> {
                         String[] parts = imageUrl.split("/");
@@ -459,6 +463,11 @@ public class BooruDownloader {
     private String danbooruVideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
         String[] slashParts = videoUrl.split("/");
         return "https://" + targetDomain + "/player/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0] + "&w=" + image.getWidth() + "&h=" + image.getHeight();
+    }
+
+    private String danbooruAnimatedGifUrlToOwnCDN(String targetDomain, String videoUrl) {
+        String[] slashParts = videoUrl.split("/");
+        return "https://" + targetDomain + "/media/danbooru/" + slashParts[slashParts.length - 3] + "/" + slashParts[slashParts.length - 2] + "/" + slashParts[slashParts.length - 1] + "?s=" + slashParts[2].split("\\.")[0];
     }
 
     private String e621VideoUrlToOwnCDN(String targetDomain, String videoUrl, BoardImage image) {
