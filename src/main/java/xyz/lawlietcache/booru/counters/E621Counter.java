@@ -1,7 +1,7 @@
 package xyz.lawlietcache.booru.counters;
 
-import xyz.lawlietcache.core.WebCache;
 import redis.clients.jedis.JedisPool;
+import xyz.lawlietcache.core.WebCache;
 import xyz.lawlietcache.util.InternetUtil;
 
 public class E621Counter extends FurryCounter {

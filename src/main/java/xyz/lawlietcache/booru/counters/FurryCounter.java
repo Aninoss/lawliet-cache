@@ -27,14 +27,17 @@ public abstract class FurryCounter implements Counter {
             return -1;
         }
 
-        int posts = StringUtil.countMatches(data, "<article id=\"post_");
-        String[] groups = StringUtil.extractGroups(data, "data-total=\"", "\"");
-        if (groups.length == 0) {
+        String[] groups = StringUtil.extractGroups(data, "class=\"approximate-count\"", "data-pages");
+        if (groups.length != 1) {
             return -1;
         }
 
-        int pageMax = Integer.parseInt(groups[0]);
-        return pageMax == 1 ? posts : Math.max((pageMax - 1) * posts, 0);
+        String[] countGroups = StringUtil.extractGroups(groups[0], "data-count=\"", "\"");
+        if (countGroups.length != 1) {
+            return -1;
+        }
+
+        return Integer.parseInt(countGroups[0]);
     }
 
 }

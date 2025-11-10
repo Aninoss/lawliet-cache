@@ -375,7 +375,9 @@ public class BooruDownloader {
                         imageUrl = danbooruVideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
                     }
                     case E621 -> {
-                        imageUrl = imageUrl.replace("/data/", "/data/sample/").replace(".webm", "_alt.mp4");
+                        imageUrl = imageUrl.replace("/data/", "/data/sample/")
+                                .replace(".mp4", "_alt.mp4")
+                                .replace(".webm", "_alt.mp4");
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = e621VideoUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image);
