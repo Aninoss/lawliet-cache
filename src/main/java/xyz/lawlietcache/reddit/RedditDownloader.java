@@ -197,7 +197,7 @@ public class RedditDownloader {
         url = dataJson.getString("url");
         post.setUrl(url);
         source = "https://www.reddit.com" + dataJson.getString("permalink");
-        thumbnail = dataJson.getString("thumbnail");
+        thumbnail = dataJson.has("thumbnail") && dataJson.get("thumbnail") instanceof String ? dataJson.getString("thumbnail") : "";
         if (url.contains("//")) {
             domain = url.split("//")[1].replace("www.", "");
             if (domain.contains("/")) domain = domain.split("/")[0];
