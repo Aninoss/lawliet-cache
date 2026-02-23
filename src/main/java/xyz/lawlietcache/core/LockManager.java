@@ -6,14 +6,14 @@ import com.google.common.cache.LoadingCache;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class LockManager {
 
     private final LoadingCache<String, Object> lockCache = CacheBuilder.newBuilder()
-            .expireAfterAccess(Duration.ofMinutes(10))
+            .expireAfterAccess(10, TimeUnit.MINUTES)
             .build(new CacheLoader<>() {
                 @Override
                 public Object load(@NonNull String key) {
