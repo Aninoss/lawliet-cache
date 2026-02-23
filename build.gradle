@@ -34,7 +34,7 @@ dependencies {
     implementation 'redis.clients:jedis:3.6.3'
     implementation 'com.github.Aninoss:imageboard-api:edd30eccb0'
     implementation 'commons-io:commons-io:20030203.000550'
-    implementation 'org.apache.commons:commons-text:1.15.0'
+    implementation 'org.apache.commons:commons-text:1.9'
     implementation 'com.github.Aninoss:pixivj:d96712f1af'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 }
