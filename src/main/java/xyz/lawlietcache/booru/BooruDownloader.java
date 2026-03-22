@@ -274,7 +274,15 @@ public class BooruDownloader {
         long maxPostDate = System.currentTimeMillis() - Duration.ofDays(3).toMillis();
         Set<String> blockSet;
         try (Jedis jedis = jedisPool.getResource()) {
-            blockSet = jedis.hgetAll(REPORTS_KEY).keySet();
+            blockSet = jedis.hgetAll(REPORTS_KEY).keySet().stream()
+                    .map(str -> {
+                        if (str.startsWith("http") && str.contains(".")) {
+                            return str.substring(0, str.lastIndexOf("."));
+                        } else {
+                            return str;
+                        }
+                    })
+                    .collect(Collectors.toSet());
         }
 
         int[] passingRestrictions = new int[9];
@@ -285,7 +293,7 @@ public class BooruDownloader {
                 boolean isExplicit = boardImage.getRating() == Rating.EXPLICIT;
                 boolean notPending = !boardImage.isPending();
                 long created = boardImage.getCreationMillis();
-                boolean blocked = blockSet.contains(fileUrl);
+                boolean blocked = blockSet.contains(fileUrl.substring(0, fileUrl.lastIndexOf(".")));
 
                 ContentType contentType = ContentType.parseFromUrl(fileUrl);
                 if (contentType == null) {

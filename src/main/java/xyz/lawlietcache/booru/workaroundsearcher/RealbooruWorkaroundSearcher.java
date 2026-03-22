@@ -57,6 +57,7 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
                 uri = StringUtil.extractGroups(httpResponse.getBody(), "https://video-cdn.realbooru.com//images/", "\"")[0].replace(".webm", ".mp4");
             }
             booruImage.setImageUrl("https://realbooru.com//images/" + uri);
+            booruImage.setOriginalImageUrl("https://realbooru.com//images/" + uri);
         } catch (Throwable e) {
             LOGGER.error("Realbooru workaround post process exception:\n{}", httpResponse.getBody(), e);
         }
