@@ -58,7 +58,7 @@ public enum BoardType {
             new RealbooruBoard(),
             RealbooruImage.class,
             new RealbooruWorkaroundCounter(),
-            -1,
+            40,
             new DefaultAutoComplete("realbooru.com"),
             ImageBoard.ResponseFormat.JSON,
             new RealbooruWorkaroundSearcher()
