@@ -372,6 +372,7 @@ public class BooruDownloader {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = rule34UrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                        webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
                     }
                 }
                 case DANBOORU -> {
@@ -379,6 +380,7 @@ public class BooruDownloader {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = danbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                        webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
                     }
                 }
                 case E621 -> {
@@ -393,6 +395,7 @@ public class BooruDownloader {
                     String[] parts = imageUrl.split("/");
                     int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                     imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
+                    webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
                 }
             }
             
