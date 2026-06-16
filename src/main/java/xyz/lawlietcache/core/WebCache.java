@@ -35,6 +35,7 @@ public class WebCache {
     public static final String METHOD_GET = "GET";
     public static final String PROXY_COUNTER_KEY = "proxy_counter:";
     public static final boolean DOMAIN_BLOCKER = Boolean.parseBoolean(System.getenv("DOMAIN_BLOCKER"));
+    public static final boolean USE_CACHE_IN_DEBUG = true;
 
     private final JedisPool jedisPool;
     private final OkHttpClient client;
@@ -91,7 +92,7 @@ public class WebCache {
         ) {
             try {
                 HttpResponse httpResponse = readHttpResponseFromFile(key, minutesCached);
-                if (httpResponse != null && Program.isProductionMode()) {
+                if (httpResponse != null && (Program.isProductionMode() || USE_CACHE_IN_DEBUG)) {
                     fromCache.set(true);
                     return httpResponse;
                 }
@@ -100,7 +101,7 @@ public class WebCache {
             }
 
             HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-            if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && Program.isProductionMode()) {
+            if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && (Program.isProductionMode() || USE_CACHE_IN_DEBUG)) {
                 writeHttpResponseToFile(key, httpResponse);
             }
 

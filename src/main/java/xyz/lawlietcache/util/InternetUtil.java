@@ -16,4 +16,8 @@ public class InternetUtil {
         return url.endsWith("jpeg") || url.endsWith("jpg") || url.endsWith("png") || url.endsWith("bmp") || url.endsWith("gif");
     }
 
+    public static boolean urlContainsVideo(String url) {
+        return url.endsWith("mp4") || url.endsWith("avi") || url.endsWith("webm");
+    }
+
 }

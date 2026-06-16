@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -168,15 +169,10 @@ public class RedditDownloader {
     private RedditPost extractPost(JSONObject dataJson) {
         RedditPost post = new RedditPost();
 
-        String description;
-        String url;
-        String source;
-        String thumbnail;
-        String domain = "";
-        Object flair;
-
         post.setId(dataJson.getString("name"));
-        if (dataJson.has("subreddit_name_prefixed")) post.setSubreddit(dataJson.getString("subreddit_name_prefixed"));
+        if (dataJson.has("subreddit_name_prefixed")) {
+            post.setSubreddit(dataJson.getString("subreddit_name_prefixed"));
+        }
         post.setScore(dataJson.has("score") ? dataJson.getInt("score") : 0);
         post.setComments(dataJson.has("num_comments") ? dataJson.getInt("num_comments") : 0);
         post.setInstant(new Date(dataJson.getLong("created_utc") * 1000L).toInstant());
@@ -187,33 +183,73 @@ public class RedditDownloader {
             post.setNsfw(true);
         }
         post.setTitle(dataJson.getString("title"));
+        post.setDescription(dataJson.getString("selftext"));
         post.setAuthor(dataJson.getString("author"));
 
-        flair = dataJson.get("link_flair_text");
-        if (flair != null && !("" + flair).equals("null") && !("" + flair).equals("") && !("" + flair).equals(" ")) {
+        Object flair = dataJson.get("link_flair_text");
+        String flairText = flair instanceof String ? (String) flair : "";
+        if (!flairText.equals("null") && !flairText.isBlank()) {
             post.setFlair(flair.toString());
         }
-        description = dataJson.getString("selftext");
-        url = dataJson.getString("url");
+
+        String url = dataJson.getString("url");
         post.setUrl(url);
-        source = "https://www.reddit.com" + dataJson.getString("permalink");
-        thumbnail = dataJson.has("thumbnail") && dataJson.get("thumbnail") instanceof String ? dataJson.getString("thumbnail") : "";
+
+        String domain = "";
         if (url.contains("//")) {
             domain = url.split("//")[1].replace("www.", "");
-            if (domain.contains("/")) domain = domain.split("/")[0];
+            if (domain.contains("/")) {
+                domain = domain.split("/")[0];
+            }
         }
-        boolean postSource = true;
 
-        if (dataJson.has("post_hint") && dataJson.getString("post_hint").equals("image")) {
+        boolean postSource = true;
+        String source = "https://www.reddit.com" + dataJson.getString("permalink");
+        String thumbnail = dataJson.has("thumbnail") && dataJson.get("thumbnail") instanceof String ? dataJson.getString("thumbnail") : "";
+        String postHint = dataJson.has("post_hint") ? dataJson.getString("post_hint") : "";
+
+        if (dataJson.has("is_gallery") && dataJson.getBoolean("is_gallery")) {
+            JSONArray itemsJson = dataJson.getJSONObject("gallery_data").getJSONArray("items");
+            ArrayList<String> imageUrls = new ArrayList<>();
+            for (int i = 0; i < itemsJson.length(); i++) {
+                String mediaId = itemsJson.getJSONObject(i).getString("media_id");
+                JSONObject mediaJson = dataJson.getJSONObject("media_metadata").getJSONObject(mediaId).getJSONObject("s");
+                String imageUrl;
+                if (mediaJson.has("mp4")) {
+                    imageUrl = mediaJson.getString("mp4");
+                } else if (mediaJson.has("gif")) {
+                    imageUrl = mediaJson.getString("gif");
+                } else {
+                    imageUrl = mediaJson.getString("u");
+                }
+                imageUrls.add(imageUrl);
+            }
+
+            post.setImages(imageUrls);
+            post.setImage(imageUrls.get(ThreadLocalRandom.current().nextInt(imageUrls.size())));
+            post.setUrl(source);
+            postSource = false;
+            domain = "reddit.com";
+        } else if (postHint.equals("image") || postHint.equals("hosted:video")) {
+            post.setImages(List.of(url));
             post.setImage(url);
             post.setUrl(source);
             postSource = false;
             domain = "reddit.com";
+        } else if (url.contains("redgifs.com") && dataJson.has("secure_media") && dataJson.get("secure_media") instanceof JSONObject) {
+            thumbnail = dataJson.getJSONObject("secure_media").getJSONObject("oembed").getString("thumbnail_url");
+            String imageUrl = thumbnail.replace("-poster.jpg", ".mp4");
+            post.setImages(List.of(imageUrl));
+            post.setImage(imageUrl);
+            post.setUrl(source);
+            postSource = false;
+            domain = "redgifs.com";
         } else {
             if (dataJson.has("preview") && dataJson.getJSONObject("preview").has("images")) {
-                post.setThumbnail(dataJson.getJSONObject("preview").getJSONArray("images").getJSONObject(0).getJSONObject("source").getString("url"));
+                thumbnail = dataJson.getJSONObject("preview").getJSONArray("images").getJSONObject(0).getJSONObject("source").getString("url");
             } else {
-                if (InternetUtil.urlContainsImage(url)) {
+                if (InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
+                    post.setImages(List.of(url));
                     post.setImage(url);
                     post.setUrl(source);
                     postSource = false;
@@ -224,13 +260,12 @@ public class RedditDownloader {
             }
         }
 
+        post.setThumbnail(thumbnail);
         if (postSource && !source.equals(url)) {
             post.setSourceLink(source);
         }
 
-        post.setDescription(description);
         post.setDomain(domain);
-
         return post;
     }
 
