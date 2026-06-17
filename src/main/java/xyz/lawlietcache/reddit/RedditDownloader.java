@@ -1,8 +1,5 @@
 package xyz.lawlietcache.reddit;
 
-import xyz.lawlietcache.core.HttpResponse;
-import xyz.lawlietcache.core.JedisPoolManager;
-import xyz.lawlietcache.core.WebCache;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -11,6 +8,9 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.params.SetParams;
+import xyz.lawlietcache.core.HttpResponse;
+import xyz.lawlietcache.core.JedisPoolManager;
+import xyz.lawlietcache.core.WebCache;
 import xyz.lawlietcache.reddit.exception.RedditException;
 import xyz.lawlietcache.reddit.exception.SilentRedditException;
 import xyz.lawlietcache.util.InternetUtil;
@@ -20,7 +20,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -186,6 +185,9 @@ public class RedditDownloader {
         post.setDescription(dataJson.getString("selftext"));
         post.setAuthor(dataJson.getString("author"));
 
+        String redditUrl = "https://www.reddit.com" + dataJson.getString("permalink");
+        post.setRedditUrl(redditUrl);
+
         Object flair = dataJson.get("link_flair_text");
         String flairText = flair instanceof String ? (String) flair : "";
         if (!flairText.equals("null") && !flairText.isBlank()) {
@@ -193,21 +195,7 @@ public class RedditDownloader {
         }
 
         String url = dataJson.getString("url");
-        post.setUrl(url);
-
-        String domain = "";
-        if (url.contains("//")) {
-            domain = url.split("//")[1].replace("www.", "");
-            if (domain.contains("/")) {
-                domain = domain.split("/")[0];
-            }
-        }
-
-        boolean postSource = true;
-        String source = "https://www.reddit.com" + dataJson.getString("permalink");
-        String thumbnail = dataJson.has("thumbnail") && dataJson.get("thumbnail") instanceof String ? dataJson.getString("thumbnail") : "";
         String postHint = dataJson.has("post_hint") ? dataJson.getString("post_hint") : "";
-
         if (dataJson.has("is_gallery") && dataJson.getBoolean("is_gallery")) {
             JSONArray itemsJson = dataJson.getJSONObject("gallery_data").getJSONArray("items");
             ArrayList<String> imageUrls = new ArrayList<>();
@@ -225,47 +213,27 @@ public class RedditDownloader {
                 imageUrls.add(imageUrl);
             }
 
-            post.setImages(imageUrls);
-            post.setImage(imageUrls.get(ThreadLocalRandom.current().nextInt(imageUrls.size())));
-            post.setUrl(source);
-            postSource = false;
-            domain = "reddit.com";
-        } else if (postHint.equals("image") || postHint.equals("hosted:video")) {
-            post.setImages(List.of(url));
-            post.setImage(url);
-            post.setUrl(source);
-            postSource = false;
-            domain = "reddit.com";
+            post.setMediaUrls(imageUrls);
+        } else if (postHint.equals("image")) {
+            post.setMediaUrls(List.of(url));
         } else if (url.contains("redgifs.com") && dataJson.has("secure_media") && dataJson.get("secure_media") instanceof JSONObject) {
-            thumbnail = dataJson.getJSONObject("secure_media").getJSONObject("oembed").getString("thumbnail_url");
-            String imageUrl = thumbnail.replace("-poster.jpg", ".mp4");
-            post.setImages(List.of(imageUrl));
-            post.setImage(imageUrl);
-            post.setUrl(source);
-            postSource = false;
-            domain = "redgifs.com";
-        } else {
-            if (dataJson.has("preview") && dataJson.getJSONObject("preview").has("images")) {
-                thumbnail = dataJson.getJSONObject("preview").getJSONArray("images").getJSONObject(0).getJSONObject("source").getString("url");
-            } else {
-                if (InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
-                    post.setImages(List.of(url));
-                    post.setImage(url);
-                    post.setUrl(source);
-                    postSource = false;
-                    domain = "reddit.com";
-                } else if (thumbnail.toLowerCase().startsWith("http")) {
-                    post.setThumbnail(thumbnail);
-                }
-            }
+            String imageUrl = dataJson.getJSONObject("secure_media").getJSONObject("oembed").getString("thumbnail_url").replace("-poster.jpg", ".mp4");
+            post.setMediaUrls(List.of(imageUrl));
+            post.setContentUrl(url);
+        } else if (InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
+            post.setMediaUrls(List.of(url));
+        } else if (!url.equals(redditUrl)) {
+            post.setContentUrl(url);
         }
 
+        String thumbnail = "";
+        if (dataJson.has("preview") && dataJson.getJSONObject("preview").has("images")) {
+            thumbnail = dataJson.getJSONObject("preview").getJSONArray("images").getJSONObject(0).getJSONObject("source").getString("url");
+        } else if (dataJson.has("thumbnail") && dataJson.get("thumbnail") instanceof String && dataJson.getString("thumbnail").startsWith("http")) {
+            thumbnail = dataJson.getString("thumbnail");
+        }
         post.setThumbnail(thumbnail);
-        if (postSource && !source.equals(url)) {
-            post.setSourceLink(source);
-        }
 
-        post.setDomain(domain);
         return post;
     }
 
