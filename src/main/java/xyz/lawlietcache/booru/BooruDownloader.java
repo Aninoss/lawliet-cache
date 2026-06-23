@@ -27,6 +27,7 @@ import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -333,97 +334,103 @@ public class BooruDownloader {
             LOGGER.info("Passing restrictions: {}", passingRestrictions);
         }
 
+        ArrayList<CompletableFuture<BooruImage>> futures = new ArrayList<>();
         if (bulkMode) {
-            return pornImages.stream()
-                    .map(pornImage -> createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), usedSearchKeys))
-                    .limit(boardType.getWorkaroundSearcher() == null ? 50 : 5)
-                    .peek(booruImage -> {
+            pornImages.stream()
+                    .limit(5)
+                    .forEach(pornImage -> {
+                        CompletableFuture<BooruImage> future = createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), usedSearchKeys);
+                        futures.add(future);
+                    });
+        } else {
+            for (int i = 0; i < number; i++) {
+                BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
+                if (booruImageMeta != null) {
+                    CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
+                    futures.add(future);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return futures.stream()
+                .map(future -> {
+                    return future.thenApply(booruImage -> {
                         if (boardType.getWorkaroundSearcher() != null) {
                             boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
                         }
-                    })
-                    .toList();
-        }
-
-        ArrayList<BooruImage> booruImages = new ArrayList<>();
-        for (int i = 0; i < number; i++) {
-            BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
-            if (booruImageMeta != null) {
-                BooruImage booruImage = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
-                if (boardType.getWorkaroundSearcher() != null) {
-                    boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
-                }
-                booruImages.add(booruImage);
-            } else {
-                break;
-            }
-        }
-
-        return booruImages;
+                        return booruImage;
+                    });
+                })
+                .map(CompletableFuture::join)
+                .toList();
     }
 
-    private BooruImage createBooruImage(BoardType boardType, BoardImage image, ContentType contentType,
-                                        List<String> usedSearchKeys
+    private CompletableFuture<BooruImage> createBooruImage(BoardType boardType, BoardImage image, ContentType contentType,
+                                               List<String> usedSearchKeys
     ) {
-        String imageUrl = image.getURL();
-        String originalImageUrl = imageUrl;
-        String pageUrl = boardType.getPageUrl(image.getId());
-        try (Jedis jedis = jedisPool.getResource()) {
-            switch (boardType) {
-                case RULE34 -> {
-                    if (contentType.isVideo()) {
-                        String[] parts = imageUrl.split("/");
-                        int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
-                        imageUrl = rule34UrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                        if (requestFileAndCheckForReplacement(imageUrl)) {
-                            imageUrl = originalImageUrl.replace(".mp4", ".jpg");
+        return CompletableFuture.supplyAsync(() -> {
+            String imageUrl = image.getURL();
+            String originalImageUrl = imageUrl;
+            String pageUrl = boardType.getPageUrl(image.getId());
+            try (Jedis jedis = jedisPool.getResource()) {
+                switch (boardType) {
+                    case RULE34 -> {
+                        if (contentType.isVideo()) {
+                            String[] parts = imageUrl.split("/");
+                            int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
+                            imageUrl = rule34UrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                            if (requestFileAndCheckForReplacement(imageUrl)) {
+                                imageUrl = originalImageUrl.replace(".mp4", ".jpg");
+                            }
                         }
                     }
-                }
-                case DANBOORU -> {
-                    if (contentType.isAnimated()) {
+                    case DANBOORU -> {
+                        if (contentType.isAnimated()) {
+                            String[] parts = imageUrl.split("/");
+                            int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
+                            imageUrl = danbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                            if (requestFileAndCheckForReplacement(imageUrl)) {
+                                imageUrl = originalImageUrl.replace("/original/", "/720x720/").replace(".gif", ".webp").replace(".mp4", ".webp");
+                            }
+                        }
+                    }
+                    case E621 -> {
+                        if (contentType.isVideo()) {
+                            imageUrl = imageUrl.replace("/data/", "/data/sample/")
+                                    .replace(".mp4", "_480p.mp4")
+                                    .replace(".webm", "_480p.mp4");
+                        }
+                    }
+                    case REALBOORU -> {
+                        imageUrl = imageUrl.replace(".webm", ".mp4");
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
-                        imageUrl = danbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
+                        imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
                         if (requestFileAndCheckForReplacement(imageUrl)) {
-                            imageUrl = originalImageUrl.replace("/original/", "/720x720/").replace(".gif", ".webp").replace(".mp4", ".webp");
+                            imageUrl = ((CustomImage) image).getThumbnailUrl();
+                            imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
                         }
                     }
                 }
-                case E621 -> {
-                    if (contentType.isVideo()) {
-                        imageUrl = imageUrl.replace("/data/", "/data/sample/")
-                                .replace(".mp4", "_480p.mp4")
-                                .replace(".webm", "_480p.mp4");
-                    }
+
+                if (contentType.isVideo()) {
+                    jedis.incr(boardType.name().toLowerCase() + "_video");
                 }
-                case REALBOORU -> {
-                    imageUrl = imageUrl.replace(".webm", ".mp4");
-                    String[] parts = imageUrl.split("/");
-                    int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
-                    imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
-                    if (requestFileAndCheckForReplacement(imageUrl)) {
-                        imageUrl = ((CustomImage) image).getThumbnailUrl();
-                        imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
-                    }
-                }
+                jedis.incr(boardType.name().toLowerCase() + "_total");
             }
 
-            if (contentType.isVideo()) {
-                jedis.incr(boardType.name().toLowerCase() + "_video");
-            }
-            jedis.incr(boardType.name().toLowerCase() + "_total");
-        }
-
-        return new BooruImage()
-                .setId(image.getId())
-                .setImageUrl(imageUrl)
-                .setOriginalImageUrl(originalImageUrl)
-                .setPageUrl(pageUrl)
-                .setScore(image.getScore())
-                .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
-                .setTags(usedSearchKeys)
-                .setImageTags(image.getTags());
+            return new BooruImage()
+                    .setId(image.getId())
+                    .setImageUrl(imageUrl)
+                    .setOriginalImageUrl(originalImageUrl)
+                    .setPageUrl(pageUrl)
+                    .setScore(image.getScore())
+                    .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
+                    .setTags(usedSearchKeys)
+                    .setImageTags(image.getTags());
+        });
     }
 
     private boolean requestFileAndCheckForReplacement(String fileUrl) {
