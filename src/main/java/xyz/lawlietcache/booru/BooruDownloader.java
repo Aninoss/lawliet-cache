@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import xyz.lawlietcache.booru.customboards.CustomImage;
 import xyz.lawlietcache.booru.exception.BooruException;
 import xyz.lawlietcache.booru.exception.ServiceRefusedException;
 import xyz.lawlietcache.booru.exception.SilentBooruException;
@@ -20,6 +21,7 @@ import xyz.lawlietcache.core.JedisPoolManager;
 import xyz.lawlietcache.core.Program;
 import xyz.lawlietcache.core.WebCache;
 import xyz.lawlietcache.util.NSFWUtil;
+import xyz.lawlietcache.util.StringUtil;
 
 import java.io.InterruptedIOException;
 import java.time.Duration;
@@ -37,6 +39,7 @@ public class BooruDownloader {
     public static final String REPORTS_KEY = "reports";
     private static final int MAX_ALERT_REQUESTS_PER_SECOND = Integer.parseInt(System.getenv("MAX_BOORU_ALERT_REQUESTS_PER_SECOND"));
     private static final boolean LOG_BLOCKED_BOORU_ALERT_REQUESTS = Boolean.parseBoolean(System.getenv("LOG_BLOCKED_BOORU_ALERT_REQUESTS"));
+    private static final long MS_PROXY_MAX_FILE_SIZE = Long.parseLong(System.getenv("MS_PROXY_MAX_FILE_SIZE_MB")) * 1_000_000L;
 
     private final BooruFilter booruFilter;
     private final OkHttpClient client;
@@ -372,15 +375,19 @@ public class BooruDownloader {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = rule34UrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                        webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
+                        if (requestFileAndCheckForReplacement(imageUrl)) {
+                            imageUrl = originalImageUrl.replace(".mp4", ".jpg");
+                        }
                     }
                 }
                 case DANBOORU -> {
-                    if (originalImageUrl.endsWith(".gif") || contentType.isVideo()) {
+                    if (contentType.isAnimated()) {
                         String[] parts = imageUrl.split("/");
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = danbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
-                        webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
+                        if (requestFileAndCheckForReplacement(imageUrl)) {
+                            imageUrl = originalImageUrl.replace("/original/", "/720x720/").replace(".gif", ".webp").replace(".mp4", ".webp");
+                        }
                     }
                 }
                 case E621 -> {
@@ -395,10 +402,13 @@ public class BooruDownloader {
                     String[] parts = imageUrl.split("/");
                     int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                     imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
-                    webCache.getWithoutCache(imageUrl.replace("/media/", "/media_download/"));
+                    if (requestFileAndCheckForReplacement(imageUrl)) {
+                        imageUrl = ((CustomImage) image).getThumbnailUrl();
+                        imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
+                    }
                 }
             }
-            
+
             if (contentType.isVideo()) {
                 jedis.incr(boardType.name().toLowerCase() + "_video");
             }
@@ -414,6 +424,16 @@ public class BooruDownloader {
                 .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
                 .setTags(usedSearchKeys)
                 .setImageTags(image.getTags());
+    }
+
+    private boolean requestFileAndCheckForReplacement(String fileUrl) {
+        String mediaDownloadResponse = webCache.get(fileUrl.replace("/media/", "/media_download/"), 1440).getBody();
+        long fileSize = StringUtil.stringIsLong(mediaDownloadResponse) ? Long.parseLong(mediaDownloadResponse) : -1;
+        if (fileSize < 0L) {
+            LOGGER.error("Could not request file: {}", fileUrl);
+            return true;
+        }
+        return fileSize > MS_PROXY_MAX_FILE_SIZE;
     }
 
     private static List<String> extractTags(String input) {

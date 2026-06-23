@@ -74,7 +74,8 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
             fileExt = ".jpeg";
         }
 
-        String contentUrl = StringUtil.extractGroups(html, "<img src=\"", "\"")[0]
+        String thumbnailUrl = StringUtil.extractGroups(html, "<img src=\"", "\"")[0];
+        String contentUrl = thumbnailUrl
                 .replace("/thumbnails", "//images")
                 .replace("/thumbnail_", "/")
                 .replace(".jpg", fileExt);
@@ -87,6 +88,7 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
                 Rating.EXPLICIT,
                 tags,
                 contentUrl,
+                thumbnailUrl,
                 false,
                 false,
                 0

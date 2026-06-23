@@ -14,11 +14,12 @@ public class CustomImage implements BoardImage {
     private final Rating rating;
     private final List<String> tags;
     private final String url;
+    private final String thumbnailUrl;
     private final boolean hasChildren;
     private final boolean isPending;
     private final long creationMillis;
 
-    public CustomImage(long id, int width, int height, int score, Rating rating, List<String> tags, String url, boolean hasChildren, boolean isPending, long creationMillis) {
+    public CustomImage(long id, int width, int height, int score, Rating rating, List<String> tags, String url, String thumbnailUrl, boolean hasChildren, boolean isPending, long creationMillis) {
         this.id = id;
         this.width = width;
         this.height = height;
@@ -26,6 +27,7 @@ public class CustomImage implements BoardImage {
         this.rating = rating;
         this.tags = tags;
         this.url = url;
+        this.thumbnailUrl = thumbnailUrl;
         this.hasChildren = hasChildren;
         this.isPending = isPending;
         this.creationMillis = creationMillis;
@@ -64,6 +66,10 @@ public class CustomImage implements BoardImage {
     @Override
     public String getURL() {
         return url;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
     }
 
     @Override

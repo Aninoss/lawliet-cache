@@ -30,6 +30,15 @@ public class StringUtil {
         }
     }
 
+    public static boolean stringIsLong(String string) {
+        try {
+            Long.parseLong(string);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     public static int countMatches(String str, String findStr) {
         int lastIndex = 0;
         int count = 0;
