@@ -64,9 +64,10 @@ public class RealbooruWorkaroundSearcher implements WorkaroundSearcher {
     }
 
     private CustomImage htmlToBoardImage(String html) {
+        String style = StringUtil.extractGroups(html, "style=\"", "\"")[0];
         List<String> tags = List.of(StringUtil.extractGroups(html, "title=\"", "\"")[0].split(", "));
         String fileExt;
-        if (tags.contains("webm") || tags.contains("video") || tags.contains("sound") || tags.contains("music")) {
+        if (tags.contains("webm") || tags.contains("video") || tags.contains("sound") || tags.contains("music") || style.startsWith("border")) {
             fileExt = ".mp4";
         } else if (tags.contains("gif") || tags.contains("animated_gif") || tags.contains("animated")) {
             fileExt = ".gif";

@@ -20,6 +20,11 @@ public class RedditPost {
     private boolean nsfw;
     private Instant instant;
 
+    private String url;
+    private String domain;
+    private String image;
+    private String sourceLink;
+
     public RedditPost() {
     }
 
@@ -149,4 +154,36 @@ public class RedditPost {
         return this;
     }
 
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public String getSourceLink() {
+        return sourceLink;
+    }
+
+    public void setSourceLink(String sourceLink) {
+        this.sourceLink = sourceLink;
+    }
 }
