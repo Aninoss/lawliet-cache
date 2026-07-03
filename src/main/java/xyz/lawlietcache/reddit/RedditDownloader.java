@@ -184,11 +184,7 @@ public class RedditDownloader {
         post.setTitle(dataJson.getString("title"));
         post.setDescription(dataJson.getString("selftext"));
         post.setAuthor(dataJson.getString("author"));
-
-        String redditUrl = "https://www.reddit.com" + dataJson.getString("permalink");
-        post.setRedditUrl(redditUrl);
-        post.setUrl(redditUrl);
-        post.setDomain("reddit.com");
+        post.setRedditUrl(dataJson.getString("permalink"));
 
         Object flair = dataJson.get("link_flair_text");
         String flairText = flair instanceof String ? (String) flair : "";
@@ -225,20 +221,16 @@ public class RedditDownloader {
 
             if (!imageUrls.isEmpty()) {
                 post.setMediaUrls(imageUrls);
-                post.setImage(imageUrls.get(0));
             }
         } else if (postHint.equals("image")) {
             post.setMediaUrls(List.of(url));
-            post.setImage(url);
         } else if (url.contains("redgifs.com") && dataJson.has("secure_media") && dataJson.get("secure_media") instanceof JSONObject && dataJson.getJSONObject("secure_media").getJSONObject("oembed").has("thumbnail_url")) {
             String imageUrl = dataJson.getJSONObject("secure_media").getJSONObject("oembed").getString("thumbnail_url").replace("-poster.jpg", ".mp4");
             post.setMediaUrls(List.of(imageUrl));
-            post.setImage(imageUrl);
             post.setContentUrl(url);
         } else if (InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
             post.setMediaUrls(List.of(url));
-            post.setImage(url);
-        } else if (!url.equals(redditUrl)) {
+        } else if (!url.startsWith("https://www.reddit.com") && !url.startsWith("/")) {
             post.setContentUrl(url);
         }
 

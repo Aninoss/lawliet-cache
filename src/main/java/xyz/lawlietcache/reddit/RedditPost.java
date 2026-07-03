@@ -20,11 +20,6 @@ public class RedditPost {
     private boolean nsfw;
     private Instant instant;
 
-    private String url;
-    private String domain;
-    private String image;
-    private String sourceLink;
-
     public RedditPost() {
     }
 
@@ -60,7 +55,7 @@ public class RedditPost {
     }
 
     public RedditPost setRedditUrl(String redditUrl) {
-        this.redditUrl = redditUrl;
+        this.redditUrl = redditUrl.startsWith("/") ? "https://www.reddit.com" + redditUrl : redditUrl;
         return this;
     }
 
@@ -69,7 +64,7 @@ public class RedditPost {
     }
 
     public RedditPost setContentUrl(String contentUrl) {
-        this.contentUrl = contentUrl;
+        this.contentUrl = contentUrl.startsWith("/") ? "https://www.reddit.com" + contentUrl : contentUrl;
         return this;
     }
 
@@ -87,7 +82,9 @@ public class RedditPost {
     }
 
     public RedditPost setMediaUrls(List<String> mediaUrls) {
-        this.mediaUrls = mediaUrls;
+        this.mediaUrls = mediaUrls.stream()
+                .map(url -> url.startsWith("/") ? "https://www.reddit.com" + url : url)
+                .toList();
         return this;
     }
 
@@ -96,7 +93,7 @@ public class RedditPost {
     }
 
     public RedditPost setThumbnail(String thumbnail) {
-        this.thumbnail = thumbnail;
+        this.thumbnail = thumbnail.startsWith("/") ? "https://www.reddit.com" + thumbnail : thumbnail;
         return this;
     }
 
@@ -154,36 +151,4 @@ public class RedditPost {
         return this;
     }
 
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public void setDomain(String domain) {
-        this.domain = domain;
-    }
-
-    public String getImage() {
-        return image;
-    }
-
-    public void setImage(String image) {
-        this.image = image;
-    }
-
-    public String getSourceLink() {
-        return sourceLink;
-    }
-
-    public void setSourceLink(String sourceLink) {
-        this.sourceLink = sourceLink;
-    }
 }
