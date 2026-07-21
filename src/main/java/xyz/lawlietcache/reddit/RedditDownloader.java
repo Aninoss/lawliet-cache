@@ -194,7 +194,10 @@ public class RedditDownloader {
 
         String url = dataJson.getString("url");
         String postHint = dataJson.has("post_hint") ? dataJson.getString("post_hint") : "";
-        if (dataJson.has("is_gallery") && dataJson.getBoolean("is_gallery") && dataJson.has("gallery_data") && dataJson.get("gallery_data") instanceof JSONObject) {
+        if (dataJson.has("is_gallery") && dataJson.getBoolean("is_gallery") &&
+                dataJson.has("gallery_data") && dataJson.get("gallery_data") instanceof JSONObject &&
+                dataJson.has("media_metadata") && dataJson.get("media_metadata") instanceof JSONObject
+        ) {
             JSONArray itemsJson = dataJson.getJSONObject("gallery_data").getJSONArray("items");
             JSONObject mediaMetadataJson = dataJson.getJSONObject("media_metadata");
             ArrayList<String> imageUrls = new ArrayList<>();

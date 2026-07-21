@@ -138,11 +138,11 @@ public class WebCache {
                 );
             }
         }
-        url = overrideProxyDomains(url, jedis);
 
         if (!Program.isProductionMode()) {
             LOGGER.info("requesting website: {}", url);
         }
+        url = overrideProxyDomains(url, jedis);
 
         String domainBlockKey = "domain_block:" + domain;
         String domainOverloadKey = "domain_overload:" + domain;
