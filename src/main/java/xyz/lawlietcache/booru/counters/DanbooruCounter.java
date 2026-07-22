@@ -14,7 +14,7 @@ public class DanbooruCounter implements Counter {
 
     @Override
     public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
-        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags + " status:active");
+        String url = "https://danbooru.donmai.us/counts/posts.json?tags=" + InternetUtil.escapeForURL(tags);
         String data;
         try {
             if (withCache) {

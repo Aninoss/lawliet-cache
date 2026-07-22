@@ -1,9 +1,9 @@
 package xyz.lawlietcache.booru.counters;
 
-import xyz.lawlietcache.core.WebCache;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xyz.lawlietcache.util.StringUtil;
+import xyz.lawlietcache.core.WebCache;
 
 public abstract class FurryCounter implements Counter {
 
@@ -14,7 +14,7 @@ public abstract class FurryCounter implements Counter {
         String data;
         try {
             if (withCache) {
-                data = webCache.get(url, 1440).getBody();
+                data = webCache.get(url, 30).getBody();
             } else {
                 data = webCache.getWithoutCache(url).getBody();
             }
@@ -27,17 +27,12 @@ public abstract class FurryCounter implements Counter {
             return -1;
         }
 
-        String[] groups = StringUtil.extractGroups(data, "class=\"approximate-count\"", "data-pages");
-        if (groups.length != 1) {
+        try {
+            return new JSONObject(data).getJSONArray("posts").length();
+        } catch (Throwable e) {
+            LOGGER.error("Error for domain {}", domain, e);
             return -1;
         }
-
-        String[] countGroups = StringUtil.extractGroups(groups[0], "data-count=\"", "\"");
-        if (countGroups.length != 1) {
-            return -1;
-        }
-
-        return Integer.parseInt(countGroups[0]);
     }
 
 }
