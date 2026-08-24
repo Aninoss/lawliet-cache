@@ -15,11 +15,11 @@ import xyz.lawlietcache.reddit.exception.RedditException;
 import xyz.lawlietcache.reddit.exception.SilentRedditException;
 import xyz.lawlietcache.util.InternetUtil;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -36,6 +36,37 @@ public class RedditDownloader {
     public RedditDownloader(WebCache webCache, JedisPoolManager jedisPoolManager) {
         this.webCache = webCache;
         this.jedisPool = jedisPoolManager.get();
+    }
+
+    public List<SubredditAutoComplete> getAutoComplete(String query) {
+        if (query.isEmpty() || query.length() > 25) {
+            return Collections.emptyList();
+        }
+
+        String url = "https://www.reddit.com/api/subreddit_autocomplete_v2.json?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&limit=10&include_over_18=true";
+        String data = webCache.get(url, (int) Duration.ofHours(24).toMinutes()).getBody();
+        if (data == null) {
+            return Collections.emptyList();
+        }
+
+        ArrayList<SubredditAutoComplete> subreddits = new ArrayList<>();
+        JSONArray arrayJson = new JSONObject(data).getJSONObject("data").getJSONArray("children");
+        for (int i = 0; i < arrayJson.length(); i++) {
+            JSONObject subredditJson = arrayJson.getJSONObject(i);
+            JSONObject subredditDataJson = subredditJson.getJSONObject("data");
+            if (!subredditJson.getString("kind").equals("t5") || subredditDataJson.isNull("subscribers")) {
+                continue;
+            }
+
+            SubredditAutoComplete autoComplete = new SubredditAutoComplete()
+                    .setName(subredditDataJson.getString("display_name_prefixed"))
+                    .setSubscribers(subredditDataJson.getLong("subscribers"))
+                    .setNsfw(subredditDataJson.getBoolean("over18"));
+            subreddits.add(autoComplete);
+        }
+
+        subreddits.sort((s1, s2) -> Long.compare(s2.getSubscribers(), s1.getSubscribers()));
+        return Collections.unmodifiableList(subreddits);
     }
 
     public RedditPost retrievePost(long guildId, String subreddit, String orderBy, boolean allowNsfw) throws RedditException {

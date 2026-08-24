@@ -16,6 +16,7 @@ import xyz.lawlietcache.pixiv.PixivRequest;
 import xyz.lawlietcache.pixiv.exception.PixivException;
 import xyz.lawlietcache.reddit.RedditDownloader;
 import xyz.lawlietcache.reddit.RedditPost;
+import xyz.lawlietcache.reddit.SubredditAutoComplete;
 import xyz.lawlietcache.reddit.exception.RedditException;
 import xyz.lawlietcache.twitch.TwitchDownloader;
 import xyz.lawlietcache.twitch.TwitchStream;
@@ -91,6 +92,11 @@ public class ApiController {
     public List<RedditPost> redditBulk(@PathVariable("subreddit") String subreddit,
                                        @PathVariable("order_by") String orderBy) throws RedditException {
         return redditDownloader.retrievePostsBulk(subreddit, orderBy);
+    }
+
+    @GetMapping(value = "/reddit_autocomplete/{query}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<SubredditAutoComplete> redditAutoComplete(@PathVariable("query") String query) {
+        return redditDownloader.getAutoComplete(query);
     }
 
     @PostMapping(value = "/pixiv_single", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
