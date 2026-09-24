@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.Pipeline;
 import xyz.lawlietcache.booru.customboards.CustomImage;
 import xyz.lawlietcache.booru.exception.BooruException;
 import xyz.lawlietcache.booru.exception.ServiceRefusedException;
@@ -114,6 +115,19 @@ public class BooruDownloader {
                     }
                 })
                 .collect(Collectors.toList());
+    }
+
+    public void logTags(String searchKeys) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            Pipeline pipelined = jedis.pipelined();
+            for (String tag : extractTags(searchKeys)) {
+                if (tag.startsWith("-") || tag.startsWith("(")) {
+                    continue;
+                }
+                pipelined.zincrby("tag_log", 1.0, tag.toLowerCase());
+            }
+            pipelined.sync();
+        }
     }
 
     public List<BooruImage> getImages(long guildId, boolean premium, String domain, String searchKeys, boolean animatedOnly,

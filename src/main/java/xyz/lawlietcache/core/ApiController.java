@@ -57,7 +57,7 @@ public class ApiController {
 
     @PostMapping(value = "/booru_v2", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<BooruImage> booruV2(@RequestBody BooruRequest booruRequest) throws BooruException {
-        return booruDownloader.getImages(
+        List<BooruImage> images = booruDownloader.getImages(
                 booruRequest.getGuildId(),
                 booruRequest.getPremium(),
                 booruRequest.getDomain(),
@@ -72,6 +72,10 @@ public class ApiController {
                 booruRequest.getNumber(),
                 booruRequest.getBulkMode()
         );
+        if (images != null && !images.isEmpty() && !booruRequest.getBulkMode() && !booruRequest.getTest()) {
+            booruDownloader.logTags(booruRequest.getSearchTerm());
+        }
+        return images;
     }
 
     @GetMapping(value = "/booru_autocomplete/{domain}/{search}", produces = MediaType.APPLICATION_JSON_VALUE)
