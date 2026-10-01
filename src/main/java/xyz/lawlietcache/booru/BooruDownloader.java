@@ -167,20 +167,18 @@ public class BooruDownloader {
     }
 
     private List<BooruImage> getImages(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
-                                       boolean mustBeExplicit, boolean canBeVideo, int remaining, boolean softMode,
-                                       List<String> filters, List<String> strictFilters, List<String> skippedResults, int number,
-                                       boolean bulkMode
+                                       boolean mustBeExplicit, boolean canBeVideo, int remaining, boolean approximateResults,
+                                       List<String> filters, List<String> strictFilters, List<String> skippedResults,
+                                       int number, boolean bulkMode
     ) throws BooruException {
-        List<String> visibleSearchKeysList;
         StringBuilder finalSearchKeys;
 
-        if (softMode) {
-            visibleSearchKeysList = extractTags(searchKeys).stream()
+        if (approximateResults) {
+            List<String> visibleSearchKeysList = extractTags(searchKeys).stream()
                     .map(tag -> tag.startsWith("(") ? tag : (tag + "~"))
                     .toList();
             finalSearchKeys = new StringBuilder(String.join(" ", visibleSearchKeysList));
         } else {
-            visibleSearchKeysList = extractTags(searchKeys);
             finalSearchKeys = new StringBuilder(searchKeys);
         }
 
@@ -197,7 +195,6 @@ public class BooruDownloader {
         } else {
             int reduce = 1 + (boardType == BoardType.DANBOORU ? 1 : 0) + (!canBeVideo ? 1 : 0);
             finalSearchKeys = new StringBuilder(reduceTags(finalSearchKeys.toString(), boardType.getMaxTags() - reduce));
-            visibleSearchKeysList = extractTags(finalSearchKeys.toString());
         }
         if (boardType == BoardType.DANBOORU) {
             finalSearchKeys.append(" -ugoira");
@@ -218,7 +215,7 @@ public class BooruDownloader {
         String finalSearchKeysString = finalSearchKeys.toString();
         int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeysString, true));
         if (count == 0) {
-            if (!softMode) {
+            if (!approximateResults) {
                 return getImages(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, strictFilters, skippedResults, number, bulkMode);
             } else if (remaining > 0) {
                 if (searchKeys.contains(" ")) {
@@ -237,7 +234,7 @@ public class BooruDownloader {
         int page = bulkMode ? 0 : (shift + random.nextInt(count - shift)) / boardType.getMaxLimit();
 
         return getImagesOnPage(guildId, boardType, finalSearchKeysString, page, animatedOnly, mustBeExplicit,
-                canBeVideo, filters, strictFilters, skippedResults, visibleSearchKeysList, number, bulkMode
+                canBeVideo, filters, strictFilters, skippedResults, approximateResults, number, bulkMode
         );
     }
 
@@ -256,7 +253,7 @@ public class BooruDownloader {
     private List<BooruImage> getImagesOnPage(long guildId, BoardType boardType, String searchTerm, int page,
                                              boolean animatedOnly, boolean mustBeExplicit, boolean canBeVideo,
                                              List<String> filters, List<String> strictFilters, List<String> skippedResults,
-                                             List<String> usedSearchKeys, int number, boolean bulkMode
+                                             boolean approximateResults, int number, boolean bulkMode
     ) throws BooruException {
         List<? extends BoardImage> boardImages;
         if (boardType.getWorkaroundSearcher() != null) {
@@ -353,14 +350,14 @@ public class BooruDownloader {
             pornImages.stream()
                     .limit(5)
                     .forEach(pornImage -> {
-                        CompletableFuture<BooruImage> future = createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), usedSearchKeys);
+                        CompletableFuture<BooruImage> future = createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), approximateResults);
                         futures.add(future);
                     });
         } else {
             for (int i = 0; i < number; i++) {
                 BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
                 if (booruImageMeta != null) {
-                    CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), usedSearchKeys);
+                    CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), approximateResults);
                     futures.add(future);
                 } else {
                     break;
@@ -382,7 +379,7 @@ public class BooruDownloader {
     }
 
     private CompletableFuture<BooruImage> createBooruImage(BoardType boardType, BoardImage image, ContentType contentType,
-                                               List<String> usedSearchKeys
+                                               boolean approximateResults
     ) {
         return CompletableFuture.supplyAsync(() -> {
             String imageUrl = image.getURL();
@@ -442,8 +439,8 @@ public class BooruDownloader {
                     .setPageUrl(pageUrl)
                     .setScore(image.getScore())
                     .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
-                    .setTags(usedSearchKeys)
-                    .setImageTags(image.getTags());
+                    .setImageTags(image.getTags())
+                    .setApproximateResults(approximateResults);
         });
     }
 
