@@ -14,6 +14,7 @@ public class BooruImage {
     private boolean video;
     private List<String> imageTags;
     private boolean approximateResults;
+    private boolean largeFile;
 
     public long getId() {
         return id;
@@ -94,6 +95,15 @@ public class BooruImage {
 
     public BooruImage setApproximateResults(boolean approximateResults) {
         this.approximateResults = approximateResults;
+        return this;
+    }
+
+    public boolean getLargeFile() {
+        return largeFile;
+    }
+
+    public BooruImage setLargeFile(boolean largeFile) {
+        this.largeFile = largeFile;
         return this;
     }
 

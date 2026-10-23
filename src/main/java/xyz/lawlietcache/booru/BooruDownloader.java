@@ -345,37 +345,29 @@ public class BooruDownloader {
             LOGGER.info("Passing restrictions: {}", passingRestrictions);
         }
 
-        ArrayList<CompletableFuture<BooruImage>> futures = new ArrayList<>();
         if (bulkMode) {
-            pornImages.stream()
+            return pornImages.stream()
                     .limit(5)
-                    .forEach(pornImage -> {
-                        CompletableFuture<BooruImage> future = createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), approximateResults);
-                        futures.add(future);
-                    });
+                    .map(pornImage -> createBooruImage(boardType, pornImage.getBoardImage(), pornImage.getContentType(), approximateResults))
+                    .map(CompletableFuture::join)
+                    .toList();
         } else {
-            for (int i = 0; i < number; i++) {
+            ArrayList<CompletableFuture<BooruImage>> futures = new ArrayList<>();
+            for (int i = 0; i < number + 2; i++) {
                 BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
-                if (booruImageMeta != null) {
-                    CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), approximateResults);
-                    futures.add(future);
-                } else {
+                if (booruImageMeta == null) {
                     break;
                 }
+                CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), approximateResults);
+                futures.add(future);
             }
-        }
 
-        return futures.stream()
-                .map(future -> {
-                    return future.thenApply(booruImage -> {
-                        if (boardType.getWorkaroundSearcher() != null) {
-                            boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
-                        }
-                        return booruImage;
-                    });
-                })
-                .map(CompletableFuture::join)
-                .toList();
+            return futures.stream()
+                    .map(CompletableFuture::join)
+                    .sorted(Comparator.comparing(BooruImage::getLargeFile))
+                    .limit(number)
+                    .toList();
+        }
     }
 
     private CompletableFuture<BooruImage> createBooruImage(BoardType boardType, BoardImage image, ContentType contentType,
@@ -385,6 +377,7 @@ public class BooruDownloader {
             String imageUrl = image.getURL();
             String originalImageUrl = imageUrl;
             String pageUrl = boardType.getPageUrl(image.getId());
+            boolean largeFile = false;
             try (Jedis jedis = jedisPool.getResource()) {
                 switch (boardType) {
                     case RULE34 -> {
@@ -393,6 +386,7 @@ public class BooruDownloader {
                             int shard = getShard(parts[parts.length - 2], parts[parts.length - 1]);
                             imageUrl = rule34UrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
                             if (requestFileAndCheckForReplacement(imageUrl)) {
+                                largeFile = true;
                                 imageUrl = originalImageUrl.replace(".mp4", ".jpg");
                             }
                         }
@@ -403,6 +397,7 @@ public class BooruDownloader {
                             int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                             imageUrl = danbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl);
                             if (requestFileAndCheckForReplacement(imageUrl)) {
+                                largeFile = true;
                                 imageUrl = originalImageUrl.replace("/original/", "/720x720/").replace(".gif", ".webp").replace(".mp4", ".webp");
                             }
                         }
@@ -420,6 +415,7 @@ public class BooruDownloader {
                         int shard = getShard(parts[parts.length - 3] + "/" + parts[parts.length - 2], parts[parts.length - 1]);
                         imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
                         if (requestFileAndCheckForReplacement(imageUrl)) {
+                            largeFile = true;
                             imageUrl = ((CustomImage) image).getThumbnailUrl();
                             imageUrl = realbooruUrlToOwnCDN(System.getenv("MS_SHARD_" + shard), imageUrl, image.getId());
                         }
@@ -440,7 +436,13 @@ public class BooruDownloader {
                     .setScore(image.getScore())
                     .setInstant(Instant.ofEpochMilli(image.getCreationMillis()))
                     .setImageTags(image.getTags())
-                    .setApproximateResults(approximateResults);
+                    .setApproximateResults(approximateResults)
+                    .setLargeFile(largeFile);
+        }).thenApply(booruImage -> {
+            if (boardType.getWorkaroundSearcher() != null) {
+                boardType.getWorkaroundSearcher().postProcess(webCache, booruImage);
+            }
+            return booruImage;
         });
     }
 
