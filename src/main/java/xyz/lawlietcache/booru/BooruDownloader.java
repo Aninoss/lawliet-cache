@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
+import xyz.lawlietcache.booru.customboards.CustomFurryImage;
 import xyz.lawlietcache.booru.customboards.CustomImage;
 import xyz.lawlietcache.booru.exception.BooruException;
 import xyz.lawlietcache.booru.exception.ServiceRefusedException;
@@ -353,7 +354,7 @@ public class BooruDownloader {
                     .toList();
         } else {
             ArrayList<CompletableFuture<BooruImage>> futures = new ArrayList<>();
-            for (int i = 0; i < number + 2; i++) {
+            for (int i = 0; i < Math.max(number + 3, number * 2); i++) {
                 BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
                 if (booruImageMeta == null) {
                     break;
@@ -404,9 +405,12 @@ public class BooruDownloader {
                     }
                     case E621 -> {
                         if (contentType.isVideo()) {
-                            imageUrl = imageUrl.replace("/data/", "/data/sample/")
-                                    .replace(".mp4", "_480p.mp4")
-                                    .replace(".webm", "_480p.mp4");
+                            CustomFurryImage furryImage = (CustomFurryImage) image;
+                            if (furryImage.getLowResFile() != null) {
+                                imageUrl = furryImage.getLowResFile().getUrl();
+                            } else if (furryImage.getMp4File() != null) {
+                                imageUrl = furryImage.getMp4File().getUrl();
+                            }
                         }
                     }
                     case REALBOORU -> {

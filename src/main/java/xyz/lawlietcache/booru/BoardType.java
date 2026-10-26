@@ -5,7 +5,6 @@ import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.impl.DanbooruImage;
-import net.kodehawa.lib.imageboards.entities.impl.FurryImage;
 import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
 import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
 import redis.clients.jedis.JedisPool;
@@ -14,6 +13,7 @@ import xyz.lawlietcache.booru.autocomplete.DanbooruAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.DefaultAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.FurryAutoComplete;
 import xyz.lawlietcache.booru.counters.*;
+import xyz.lawlietcache.booru.customboards.CustomFurryImage;
 import xyz.lawlietcache.booru.customboards.RealbooruBoard;
 import xyz.lawlietcache.booru.customboards.RealbooruImage;
 import xyz.lawlietcache.booru.customboards.Rule34Board;
@@ -69,7 +69,7 @@ public enum BoardType {
             "https://e621.net/posts/",
             320,
             DefaultBoards.E621,
-            FurryImage.class,
+            CustomFurryImage.class,
             new E621Counter(),
             40,
             new FurryAutoComplete("e621.net"),
