@@ -354,9 +354,10 @@ public class BooruDownloader {
                     .toList();
         } else {
             ArrayList<CompletableFuture<BooruImage>> futures = new ArrayList<>();
+            Set<String> queuedImageUrls = new HashSet<>();
             for (int i = 0; i < Math.max(number + 3, number * 2); i++) {
                 BooruImageMeta booruImageMeta = booruFilter.filter(guildId, boardType.name(), searchTerm, pornImages, skippedResults, pornImages.size() - 1);
-                if (booruImageMeta == null) {
+                if (booruImageMeta == null || !queuedImageUrls.add(booruImageMeta.getImageUrl())) {
                     break;
                 }
                 CompletableFuture<BooruImage> future = createBooruImage(boardType, booruImageMeta.getBoardImage(), booruImageMeta.getContentType(), approximateResults);
@@ -408,8 +409,10 @@ public class BooruDownloader {
                             CustomFurryImage furryImage = (CustomFurryImage) image;
                             if (furryImage.getLowResFile() != null) {
                                 imageUrl = furryImage.getLowResFile().getUrl();
+                                largeFile = furryImage.getLowResFile().getSize() > MS_PROXY_MAX_FILE_SIZE;
                             } else if (furryImage.getMp4File() != null) {
                                 imageUrl = furryImage.getMp4File().getUrl();
+                                largeFile = furryImage.getMp4File().getSize() > MS_PROXY_MAX_FILE_SIZE;
                             }
                         }
                     }
