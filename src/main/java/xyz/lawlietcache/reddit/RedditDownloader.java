@@ -239,7 +239,7 @@ public class RedditDownloader {
         post.setScore(dataJson.optInt("upvotes", 0));
         post.setComments(dataJson.optInt("comments", 0));
         post.setInstant(Instant.ofEpochSecond((long) dataJson.getDouble("created_utc")));
-        post.setNsfw(dataJson.optBoolean("over_18", true));
+        post.setNsfw(dataJson.optBoolean("over_18", false));
         post.setTitle(dataJson.getString("title"));
         post.setDescription(dataJson.optString("text", ""));
         post.setAuthor(dataJson.getString("author"));
@@ -252,7 +252,7 @@ public class RedditDownloader {
 
         String thumbnail = "";
         JSONArray galleryJson = dataJson.optJSONArray("gallery_images");
-        if (dataJson.optBoolean("is_gallery", false) && galleryJson != null && galleryJson.length() > 0) {
+        if (dataJson.optBoolean("is_gallery", false) && galleryJson != null && !galleryJson.isEmpty()) {
             ArrayList<String> imageUrls = new ArrayList<>();
             for (int i = 0; i < galleryJson.length(); i++) {
                 JSONObject imageJson = galleryJson.optJSONObject(i);
