@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import xyz.lawlietcache.reddit.RedditApisClient;
 import xyz.lawlietcache.util.SerializeUtil;
 
 import java.io.File;
@@ -101,7 +102,7 @@ public class WebCache {
             }
 
             HttpResponse httpResponse = requestWithoutCache(jedis, method, url, body, contentType, headers);
-            if (httpResponse.getCode() / 100 != 5 && httpResponse.getCode() != 429 && (Program.isProductionMode() || USE_CACHE_IN_DEBUG)) {
+            if (isCacheable(url, httpResponse) && (Program.isProductionMode() || USE_CACHE_IN_DEBUG)) {
                 writeHttpResponseToFile(key, httpResponse);
             }
 
@@ -110,6 +111,16 @@ public class WebCache {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean isCacheable(String url, HttpResponse httpResponse) {
+        int code = httpResponse.getCode();
+        if (code / 100 == 5 || code == 429) {
+            return false;
+        }
+
+        boolean ownApiAuthError = url.startsWith("https://" + RedditApisClient.DOMAIN + "/") && (code == 401 || code == 402 || code == 403);
+        return !ownApiAuthError;
     }
 
     public HttpResponse getWithoutCache(String url, HttpHeader... headers) {

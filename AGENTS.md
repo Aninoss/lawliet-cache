@@ -13,13 +13,14 @@ Many are read in `static final` fields, so a missing var fails on class load.
 - Core: `PORT` (also `server.port` in `application.properties`), `PRODUCTION` (must be set; `"true"` enables auth), `AUTH`, `HOSTNAME`, `REDIS_HOST`, `REDIS_PORT`, `WEBCACHE_ROOT_PATH`, `DOMAIN_BLOCKER`, `STOP_ON_CONNECTION_ERROR`
 - Booru: `DANBOORU_LOGIN`, `DANBOORU_API_TOKEN`, `RULE34_API_KEY`, `RULE34_USER_ID`, `MAX_BOORU_ALERT_REQUESTS_PER_SECOND`, `LOG_BLOCKED_BOORU_ALERT_REQUESTS`
 - Media-server proxy: `MS_MAX_SHARDS`, `MS_SHARD_<n>`, `MS_PROXY_AUTH`, `MS_PROXY_MAX_FILE_SIZE_MB`, `MS_PROXY_HOSTS_<ProxyTarget>`, `MS_PROXY_HEADERS_<ProxyTarget>`
+- Reddit: `REDDITAPIS_KEY` (bearer key for redditapis.com, pay-per-call; read in `RedditApisClient`, startup fails without it)
 - Others: `PIXIV_REFRESH_TOKEN`, `TWITCH_CLIENT_IDS`
 - Redis is required (locks, counters, tag-usage logging). Cache files are also written to disk under `WEBCACHE_ROOT_PATH`.
 
 ## Architecture
 - `core/ApiController` exposes everything under `/api/` (`/ping`, `/booru_v2`, `cached_proxy`, reddit, pixiv, twitch, ...). `StaticTokenFilter` requires `Authorization: <AUTH>` only when `PRODUCTION=true`; otherwise auth is skipped.
 - `core/WebCache`: shared cached HTTP layer (OkHttp, domain blocker, proxy routing through the media-server shards). Downloaders go through it.
-- Per-source packages: `booru/` (`BoardType` enum maps domain -> board implementation; `counters/` per-site result counters, `customboards/`, `workaroundsearcher/`, `autocomplete/`), `reddit/`, `pixiv/`, `twitch/`. Each source has its own `exception/` package whose exceptions are surfaced by `core/ExceptionFilter`/controller.
+- Per-source packages: `booru/` (`BoardType` enum maps domain -> board implementation; `counters/` per-site result counters, `customboards/`, `workaroundsearcher/`, `autocomplete/`), `reddit/` (uses the paid redditapis.com API via `RedditApisClient`, not reddit.com; 401/402/403 responses from it are never cached), `pixiv/`, `twitch/`. Each source has its own `exception/` package whose exceptions are surfaced by `core/ExceptionFilter`/controller.
 - `BooruDownloader` calls its own `http://localhost:$PORT/api/cached_proxy` with the `AUTH` header; `CheckOwnConnection` pings `/api/ping` the same way.
 - Adding a booru site generally means touching `BoardType` plus a matching counter/downloader branch in `BooruDownloader` (CDN rewrites like `rule34UrlToOwnCDN` are per-site).
 
