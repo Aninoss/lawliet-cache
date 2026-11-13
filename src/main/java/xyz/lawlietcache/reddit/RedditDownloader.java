@@ -182,7 +182,7 @@ public class RedditDownloader {
 
         if (code / 100 != 2) {
             LOGGER.error("Error code {} for {} (from cache: {})", code, logTarget, fromCache.get());
-            if (code == 404) {
+            if (code == 404 || code == 503) {
                 return null;
             } else if (code == 402) {
                 LOGGER.error("Redditapis balance is empty, blocking reddit requests for {} minutes", BILLING_BLOCK_MIN);

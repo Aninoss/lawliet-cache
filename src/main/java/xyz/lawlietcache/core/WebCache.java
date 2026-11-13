@@ -182,9 +182,7 @@ public class WebCache {
             if (response.code() / 100 != 2) {
                 LOGGER.warn("Cache: error response {} for url {}", response.code(), url);
             }
-            if (response.code() == 503) {
-                jedis.set(domainBlockKey, String.valueOf(MAX_ERRORS));
-            } else if (response.code() / 100 == 5) {
+            if (response.code() / 100 == 5 && (response.code() != 503 || !domain.equals("api.redditapis.com"))) {
                 throw new IOException("Server error");
             } else {
                 long errors = jedis.decr(domainBlockKey);
