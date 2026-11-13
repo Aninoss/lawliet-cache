@@ -89,7 +89,7 @@ public class RedditDownloader {
     }
 
     public List<RedditPost> retrievePostsBulk(String subreddit, String orderBy) throws RedditException {
-        Listing listing = retrieveListing(subreddit, orderBy, 100, null);
+        Listing listing = retrieveListing(subreddit, orderBy, null);
         if (listing == null) {
             return null;
         }
@@ -102,7 +102,7 @@ public class RedditDownloader {
     }
 
     private RedditPost retrievePostRaw(long guildId, String subreddit, String orderBy, String after, boolean allowNsfw, int page) throws RedditException {
-        Listing listing = retrieveListing(subreddit, orderBy, 100, after);
+        Listing listing = retrieveListing(subreddit, orderBy, after);
         RedditCache redditCache = new RedditCache(jedisPool, guildId, subreddit, orderBy);
         if (listing == null) {
             if (page > 0) {
@@ -138,7 +138,7 @@ public class RedditDownloader {
         }
     }
 
-    private Listing retrieveListing(String subreddit, String orderBy, int limit, String after) throws RedditException {
+    private Listing retrieveListing(String subreddit, String orderBy, String after) throws RedditException {
         try (Jedis jedis = jedisPool.getResource()) {
             if (jedis.exists(KEY_REDDIT_BLOCK)) {
                 throw new SilentRedditException();
@@ -151,7 +151,7 @@ public class RedditDownloader {
         if (orderBy.equals("top") || orderBy.equals("controversial")) {
             params.put("t", "day");
         }
-        params.put("limit", String.valueOf(limit));
+        params.put("limit", String.valueOf(100));
         if (after != null) {
             params.put("after", after);
         }
@@ -166,7 +166,7 @@ public class RedditDownloader {
             return null;
         }
 
-        List<JSONObject> posts = filterPostArrayStickied(postArrayJson);
+        List<JSONObject> posts = filterPostArray(postArrayJson);
         if (posts.isEmpty()) {
             return null;
         }
@@ -214,11 +214,19 @@ public class RedditDownloader {
         }
     }
 
-    private List<JSONObject> filterPostArrayStickied(JSONArray postArrayJson) {
+    private List<JSONObject> filterPostArray(JSONArray postArrayJson) {
         List<JSONObject> posts = new ArrayList<>();
         for (int i = 0; i < postArrayJson.length(); i++) {
             JSONObject post = postArrayJson.optJSONObject(i);
-            if (post != null && !post.optBoolean("stickied", false) && !post.optString("author", "").isEmpty()) {
+            if (post == null) {
+                continue;
+            }
+
+            boolean stickied = post.optBoolean("stickied", false);
+            String author = post.optString("author", "");
+            String linkUrl = post.optString("link_url", "");
+            String permalink = post.optString("permalink", "");
+            if (!stickied && !author.isEmpty() && (!linkUrl.startsWith("/r/") || !permalink.startsWith("/r/") || linkUrl.equals(permalink))) {
                 posts.add(post);
             }
         }
@@ -278,9 +286,7 @@ public class RedditDownloader {
                 url = dataJson.optString("url", "");
             }
 
-            if (url.contains("redgifs.com")) {
-                post.setContentUrl(url);
-            } else if (url.contains("i.redd.it") || InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
+            if (url.contains("i.redd.it") || InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
                 post.setMediaUrls(List.of(url));
             } else if (!url.isEmpty() && !url.startsWith("https://www.reddit.com") && !url.startsWith("https://reddit.com") && !url.startsWith("/")) {
                 post.setContentUrl(url);
