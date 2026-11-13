@@ -149,7 +149,7 @@ public class RedditDownloader {
         params.put("subreddit", subreddit);
         params.put("sort", orderBy);
         if (orderBy.equals("top") || orderBy.equals("controversial")) {
-            params.put("t", "day");
+            params.put("t", "all");
         }
         params.put("limit", String.valueOf(25));
         if (after != null) {
