@@ -151,7 +151,7 @@ public class RedditDownloader {
         if (orderBy.equals("top") || orderBy.equals("controversial")) {
             params.put("t", "day");
         }
-        params.put("limit", String.valueOf(100));
+        params.put("limit", String.valueOf(25));
         if (after != null) {
             params.put("after", after);
         }
