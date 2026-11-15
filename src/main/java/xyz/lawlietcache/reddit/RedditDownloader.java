@@ -154,7 +154,7 @@ public class RedditDownloader {
         if (orderBy.equals("top") || orderBy.equals("controversial")) {
             params.put("t", "all");
         }
-        params.put("limit", String.valueOf(15));
+        params.put("limit", String.valueOf(50));
         if (after != null) {
             params.put("after", after);
         }
