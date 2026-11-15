@@ -19,6 +19,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class RedditDownloader {
@@ -27,6 +29,7 @@ public class RedditDownloader {
     private final static String KEY_REDDIT_BLOCK = "reddit_block";
     private final static int BILLING_BLOCK_MIN = 10;
     private final static int MAX_PAGE = 2;
+    private final static Pattern CROSSPOST_ID_PATTERN = Pattern.compile("/comments/([a-z0-9]+)");
 
     private final RedditApisClient redditApisClient;
     private final JedisPool jedisPool;
@@ -151,7 +154,7 @@ public class RedditDownloader {
         if (orderBy.equals("top") || orderBy.equals("controversial")) {
             params.put("t", "all");
         }
-        params.put("limit", String.valueOf(25));
+        params.put("limit", String.valueOf(15));
         if (after != null) {
             params.put("after", after);
         }
@@ -166,6 +169,7 @@ public class RedditDownloader {
             return null;
         }
 
+        postArrayJson = resolveCrossposts(postArrayJson);
         List<JSONObject> posts = filterPostArray(postArrayJson);
         if (posts.isEmpty()) {
             return null;
@@ -212,6 +216,56 @@ public class RedditDownloader {
             params.ex(duration.toSeconds());
             jedis.set(KEY_REDDIT_BLOCK, Instant.now().toString(), params);
         }
+    }
+
+    private JSONArray resolveCrossposts(JSONArray postArrayJson) throws RedditException {
+        Set<String> parentFullnames = new LinkedHashSet<>();
+        for (int i = 0; i < postArrayJson.length(); i++) {
+            JSONObject post = postArrayJson.optJSONObject(i);
+            String crosspostId = post != null ? extractCrosspostId(post) : null;
+            if (crosspostId != null) {
+                parentFullnames.add("t3_" + crosspostId);
+            }
+        }
+        if (parentFullnames.isEmpty()) {
+            return postArrayJson;
+        }
+
+        JSONObject root = requestJson("/api/reddit/by_id/" + String.join(",", parentFullnames), new LinkedHashMap<>(), 119, "crossposts " + parentFullnames);
+        Map<String, JSONObject> parentsByName = new HashMap<>();
+        JSONArray parentArrayJson = root != null ? root.optJSONArray("posts") : null;
+        if (parentArrayJson != null) {
+            for (int i = 0; i < parentArrayJson.length(); i++) {
+                JSONObject parent = parentArrayJson.optJSONObject(i);
+                if (parent != null) {
+                    parentsByName.put(parent.optString("name", ""), parent);
+                }
+            }
+        }
+
+        JSONArray resolvedArrayJson = new JSONArray();
+        for (int i = 0; i < postArrayJson.length(); i++) {
+            JSONObject post = postArrayJson.optJSONObject(i);
+            if (post == null) {
+                continue;
+            }
+
+            String crosspostId = extractCrosspostId(post);
+            if (crosspostId == null) {
+                resolvedArrayJson.put(post);
+            } else {
+                JSONObject parent = parentsByName.get("t3_" + crosspostId);
+                if (parent != null) {
+                    resolvedArrayJson.put(parent);
+                }
+            }
+        }
+        return resolvedArrayJson;
+    }
+
+    private static String extractCrosspostId(JSONObject post) {
+        Matcher matcher = CROSSPOST_ID_PATTERN.matcher(post.optString("link_url", ""));
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     private List<JSONObject> filterPostArray(JSONArray postArrayJson) {
