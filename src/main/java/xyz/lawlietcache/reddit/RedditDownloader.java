@@ -281,12 +281,15 @@ public class RedditDownloader {
                 post.setMediaUrls(imageUrls);
             }
         } else {
-            String url = dataJson.optString("link_url", "");
-            if (url.isEmpty()) {
-                url = dataJson.optString("url", "");
+            String url;
+            String videoUrl = dataJson.optJSONObject("video", new JSONObject()).optString("fallback_url", "");
+            if (!videoUrl.isEmpty()) {
+                url = videoUrl;
+            } else {
+                url = dataJson.optString("link_url", dataJson.optString("url", ""));
             }
 
-            if (url.contains("i.redd.it") || InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
+            if (InternetUtil.urlContainsImage(url) || InternetUtil.urlContainsVideo(url)) {
                 post.setMediaUrls(List.of(url));
             } else if (!url.isEmpty() && !url.startsWith("https://www.reddit.com") && !url.startsWith("https://reddit.com") && !url.startsWith("/")) {
                 post.setContentUrl(url);

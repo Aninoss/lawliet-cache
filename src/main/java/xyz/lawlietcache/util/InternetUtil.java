@@ -13,11 +13,17 @@ public class InternetUtil {
     }
 
     public static boolean urlContainsImage(String url) {
-        return url.endsWith("jpeg") || url.endsWith("jpg") || url.endsWith("png") || url.endsWith("bmp") || url.endsWith("gif");
+        String ext = extractUrlExtension(url);
+        return ext.equals("jpeg") || ext.equals("jpg") || ext.equals("png") || ext.equals("bmp") || ext.equals("gif") || ext.equals("webp");
     }
 
     public static boolean urlContainsVideo(String url) {
-        return url.endsWith("mp4") || url.endsWith("avi") || url.endsWith("webm");
+        String ext = extractUrlExtension(url);
+        return ext.equals("mp4") || ext.equals("avi") || ext.equals("webm");
+    }
+
+    public static String extractUrlExtension(String url) {
+        return url.replaceAll(".*/[^.]+\\.([^?]+)\\??.*", "$1").toLowerCase();
     }
 
 }
