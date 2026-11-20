@@ -4,24 +4,29 @@ import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.boards.Board;
 import net.kodehawa.lib.imageboards.boards.DefaultBoards;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
+import net.kodehawa.lib.imageboards.entities.exceptions.QueryFailedException;
+import net.kodehawa.lib.imageboards.entities.exceptions.QueryParseException;
 import net.kodehawa.lib.imageboards.entities.impl.DanbooruImage;
 import net.kodehawa.lib.imageboards.entities.impl.Rule34Image;
 import net.kodehawa.lib.imageboards.entities.impl.SafebooruImage;
+import okhttp3.OkHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.JedisPool;
 import xyz.lawlietcache.booru.autocomplete.BooruAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.DanbooruAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.DefaultAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.FurryAutoComplete;
 import xyz.lawlietcache.booru.counters.*;
-import xyz.lawlietcache.booru.customboards.CustomFurryImage;
-import xyz.lawlietcache.booru.customboards.E621Board;
-import xyz.lawlietcache.booru.customboards.RealbooruBoard;
-import xyz.lawlietcache.booru.customboards.RealbooruImage;
-import xyz.lawlietcache.booru.customboards.Rule34Board;
+import xyz.lawlietcache.booru.customboards.*;
+import xyz.lawlietcache.booru.exception.BooruException;
+import xyz.lawlietcache.booru.exception.SilentBooruException;
 import xyz.lawlietcache.booru.workaroundsearcher.RealbooruWorkaroundSearcher;
 import xyz.lawlietcache.booru.workaroundsearcher.WorkaroundSearcher;
 import xyz.lawlietcache.core.WebCache;
 
+import java.io.InterruptedIOException;
+import java.util.Collections;
 import java.util.List;
 
 public enum BoardType {
@@ -84,12 +89,14 @@ public enum BoardType {
             200,
             DefaultBoards.DANBOORU,
             DanbooruImage.class,
-            new DanbooruCounter(),
+            null,
             10,
             new DanbooruAutoComplete(),
             ImageBoard.ResponseFormat.JSON,
             null
     );
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(BoardType.class);
 
     private final String domain;
     private final String pagePrefix;
@@ -136,8 +143,47 @@ public enum BoardType {
         return boardImageClass;
     }
 
-    public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
-        return counter.count(webCache, jedisPool, tags, withCache);
+    public int count(OkHttpClient client, WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
+        if (counter != null) {
+            return counter.count(webCache, jedisPool, tags, withCache);
+        }
+
+        // Counted via the search request, since the counts endpoint is rate limited
+        try {
+            return search(client, webCache, tags, 0).size();
+        } catch (BooruException e) {
+            LOGGER.error("Booru count exception", e);
+            return -1;
+        }
+    }
+
+    public List<? extends BoardImage> search(OkHttpClient client, WebCache webCache, String searchTerm, int page) throws BooruException {
+        List<? extends BoardImage> boardImages;
+        if (workaroundSearcher != null) {
+            boardImages = workaroundSearcher.search(page, searchTerm, webCache);
+        } else {
+            ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, board, responseFormat, boardImageClass);
+            try {
+                try {
+                    boardImages = imageBoard.search(page, getMaxLimit(), searchTerm)
+                            .blocking();
+                } catch (RuntimeException e) {
+                    if (e.getCause() != null) {
+                        throw e.getCause();
+                    } else {
+                        throw e;
+                    }
+                }
+            } catch (QueryParseException e) {
+                throw new BooruException("Failed to query " + domain);
+            } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
+                throw new SilentBooruException();
+            } catch (Throwable e) {
+                throw new BooruException("Error in imageboard type " + domain, e);
+            }
+        }
+
+        return boardImages == null ? Collections.emptyList() : boardImages;
     }
 
     public List<BooruChoice> retrieveAutoComplete(WebCache webCache, String search) {

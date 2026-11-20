@@ -3,8 +3,6 @@ package xyz.lawlietcache.booru;
 import net.kodehawa.lib.imageboards.ImageBoard;
 import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
-import net.kodehawa.lib.imageboards.entities.exceptions.QueryFailedException;
-import net.kodehawa.lib.imageboards.entities.exceptions.QueryParseException;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import org.slf4j.Logger;
@@ -25,7 +23,6 @@ import xyz.lawlietcache.core.WebCache;
 import xyz.lawlietcache.util.NSFWUtil;
 import xyz.lawlietcache.util.StringUtil;
 
-import java.io.InterruptedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -49,7 +46,6 @@ public class BooruDownloader {
     private final WebCache webCache;
     private final Random random = new Random();
     private final JedisPool jedisPool;
-    private final BooruTester booruTester;
     private final BooruIdThresholdFinder booruIdThresholdFinder;
     private final ConsistentHash<Integer> consistentHash;
 
@@ -73,7 +69,6 @@ public class BooruDownloader {
                 .cache(null)
                 .build();
         this.webCache = webCache;
-        this.booruTester = new BooruTester(webCache, jedisPool);
         this.booruIdThresholdFinder = new BooruIdThresholdFinder(client, jedisPool, webCache);
         ImageBoard.setUserAgent(WebCache.USER_AGENT);
 
@@ -148,23 +143,19 @@ public class BooruDownloader {
             }
         }
 
-        if (test) {
-            return booruTester.get(boardType) ? List.of(new BooruImage()) : Collections.emptyList();
-        } else {
-            searchKeys = searchKeys.replaceAll("[,;+]", " ")
-                    .replaceAll(" {2,}", " ")
-                    .toLowerCase();
-            if (!canBeVideo) {
-                if (boardType == BoardType.E621) {
-                    searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
-                } else {
-                    searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
-                }
+        searchKeys = searchKeys.replaceAll("[,;+]", " ")
+                .replaceAll(" {2,}", " ")
+                .toLowerCase();
+        if (!canBeVideo) {
+            if (boardType == BoardType.E621) {
+                searchKeys = searchKeys.replaceAll("\\bwebm\\b", "animated");
+            } else {
+                searchKeys = searchKeys.replaceAll("\\bvideo\\b", "animated_gif");
             }
-
-            return getImages(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, 2,
-                    false, filters, strictFilters, skippedResults, number, bulkMode);
         }
+
+        return getImages(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, 2,
+                false, filters, strictFilters, skippedResults, number, bulkMode);
     }
 
     private List<BooruImage> getImages(long guildId, BoardType boardType, String searchKeys, boolean animatedOnly,
@@ -214,7 +205,7 @@ public class BooruDownloader {
         }
 
         String finalSearchKeysString = finalSearchKeys.toString();
-        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(webCache, jedisPool, finalSearchKeysString, true));
+        int count = Math.min(20_000 / boardType.getMaxLimit() * boardType.getMaxLimit(), boardType.count(client, webCache, jedisPool, finalSearchKeysString, true));
         if (count == 0) {
             if (!approximateResults) {
                 return getImages(guildId, boardType, searchKeys, animatedOnly, mustBeExplicit, canBeVideo, remaining, true, filters, strictFilters, skippedResults, number, bulkMode);
@@ -256,33 +247,8 @@ public class BooruDownloader {
                                              List<String> filters, List<String> strictFilters, List<String> skippedResults,
                                              boolean approximateResults, int number, boolean bulkMode
     ) throws BooruException {
-        List<? extends BoardImage> boardImages;
-        if (boardType.getWorkaroundSearcher() != null) {
-            boardImages = boardType.getWorkaroundSearcher().search(page, searchTerm, webCache);
-        } else {
-            ImageBoard<? extends BoardImage> imageBoard = new ImageBoard<>(client, boardType.getBoard(),
-                    boardType.getResponseFormat(), boardType.getBoardImageClass());
-            try {
-                try {
-                    boardImages = imageBoard.search(page, boardType.getMaxLimit(), searchTerm)
-                            .blocking();
-                } catch (RuntimeException e) {
-                    if (e.getCause() != null) {
-                        throw e.getCause();
-                    } else {
-                        throw e;
-                    }
-                }
-            } catch (QueryParseException e) {
-                throw new BooruException("Failed to query " + boardType.getDomain());
-            } catch (QueryFailedException | InterruptedException | InterruptedIOException e) {
-                throw new SilentBooruException();
-            } catch (Throwable e) {
-                throw new BooruException("Error in imageboard type " + boardType.getDomain(), e);
-            }
-        }
-
-        if (boardImages == null || boardImages.isEmpty()) {
+        List<? extends BoardImage> boardImages = boardType.search(client, webCache, searchTerm, page);
+        if (boardImages.isEmpty()) {
             return Collections.emptyList();
         }
 

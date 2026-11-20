@@ -9,7 +9,7 @@ import xyz.lawlietcache.util.StringUtil;
 
 public class RealbooruWorkaroundCounter extends SearchCounter {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(DanbooruCounter.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(RealbooruWorkaroundCounter.class);
 
     @Override
     public int count(WebCache webCache, JedisPool jedisPool, String tags, boolean withCache) {
