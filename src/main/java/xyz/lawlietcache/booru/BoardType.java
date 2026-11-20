@@ -14,6 +14,7 @@ import xyz.lawlietcache.booru.autocomplete.DefaultAutoComplete;
 import xyz.lawlietcache.booru.autocomplete.FurryAutoComplete;
 import xyz.lawlietcache.booru.counters.*;
 import xyz.lawlietcache.booru.customboards.CustomFurryImage;
+import xyz.lawlietcache.booru.customboards.E621Board;
 import xyz.lawlietcache.booru.customboards.RealbooruBoard;
 import xyz.lawlietcache.booru.customboards.RealbooruImage;
 import xyz.lawlietcache.booru.customboards.Rule34Board;
@@ -68,7 +69,7 @@ public enum BoardType {
             "e621.net",
             "https://e621.net/posts/",
             320,
-            DefaultBoards.E621,
+            new E621Board(),
             CustomFurryImage.class,
             new E621Counter(),
             40,

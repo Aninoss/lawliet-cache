@@ -22,10 +22,7 @@ import net.kodehawa.lib.imageboards.entities.BoardImage;
 import net.kodehawa.lib.imageboards.entities.Rating;
 
 import java.time.ZonedDateTime;
-import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Kodehawa
@@ -35,22 +32,22 @@ public class CustomFurryImage implements BoardImage {
     @JsonProperty("created_at")
     private String created_at;
     private String description;
-    private Rating rating;
-    private File file;
-    @JsonProperty("sample")
-    private Sample sample;
+    @JsonProperty("rating")
+    private String rating;
+    @JsonProperty("files")
+    private Files files;
+    @JsonProperty("stats")
+    private Stats stats;
+    @JsonProperty("has")
+    private Has has;
+    @JsonProperty("flags")
     private Flags flags;
-
-    @JsonProperty("has_children")
-    private boolean has_children;
-
-    @JsonProperty("score")
-    private Score score;
     @JsonProperty("tags")
-    private Tags tags;
+    private List<String> tags;
 
-    public boolean isHas_children() {
-        return has_children;
+    @Override
+    public boolean hasChildren() {
+        return has != null && has.children;
     }
 
     //Image description
@@ -59,37 +56,35 @@ public class CustomFurryImage implements BoardImage {
     }
 
     public File getFile() {
-        return file;
+        return files.original;
     }
 
     public File getMp4File() {
-        if (sample == null || sample.alternates == null || sample.alternates.variants == null) {
+        if (files.video == null || files.video.variants == null) {
             return null;
         }
-        return sample.alternates.variants.mp4;
+        return files.video.variants.mp4;
     }
 
     public File getLowResFile() {
-        if (sample == null || sample.alternates == null || sample.alternates.samples == null) {
+        if (files.video == null || files.video.samples == null) {
             return null;
         }
-        return sample.alternates.samples.p480;
-    }
-
-    public Tags getAllTags() {
-        return tags;
+        return files.video.samples.p480;
     }
 
     public Flags getFlags() {
         return flags;
     }
 
-    static class Sample {
-        @JsonProperty("alternates")
-        private Alternates alternates;
+    static class Files {
+        @JsonProperty("original")
+        private File original;
+        @JsonProperty("video")
+        private Video video;
     }
 
-    static class Alternates {
+    static class Video {
         @JsonProperty("variants")
         private Variants variants;
         @JsonProperty("samples")
@@ -104,6 +99,16 @@ public class CustomFurryImage implements BoardImage {
     static class Samples {
         @JsonProperty("480p")
         private File p480;
+    }
+
+    static class Stats {
+        @JsonProperty("score")
+        private Score score;
+    }
+
+    static class Has {
+        @JsonProperty("children")
+        private boolean children;
     }
 
     static class Score {
@@ -121,50 +126,6 @@ public class CustomFurryImage implements BoardImage {
 
         public int getTotal() {
             return total;
-        }
-    }
-
-    static class Tags {
-        private List<String> general;
-        private List<String> species;
-        private List<String> character;
-        private List<String> lore;
-        private List<String> meta;
-        private List<String> artist;
-        private List<String> copyright;
-
-        public List<String> getGeneral() {
-            return general;
-        }
-
-        public List<String> getSpecies() {
-            return species;
-        }
-
-        public List<String> getCharacter() {
-            return character;
-        }
-
-        public List<String> getLore() {
-            return lore;
-        }
-
-        public List<String> getMeta() {
-            return meta;
-        }
-
-        public List<String> getArtist() {
-            return artist;
-        }
-
-        public List<String> getCopyright() {
-            return copyright;
-        }
-
-        public List<String> getAll() {
-            return Stream.of(general, species, character, lore, meta, artist, copyright)
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toList());
         }
     }
 
@@ -245,32 +206,32 @@ public class CustomFurryImage implements BoardImage {
 
     @Override
     public int getScore() {
-        return score.getTotal();
+        return stats.score.getTotal();
     }
 
     @Override
+    @JsonIgnore
     public Rating getRating() {
-        return rating;
+        if (rating == null) {
+            return null;
+        }
+        return switch (rating) {
+            case "s" -> Rating.SAFE;
+            case "q" -> Rating.QUESTIONABLE;
+            case "e" -> Rating.EXPLICIT;
+            default -> null;
+        };
     }
 
     @Override
     @JsonIgnore
     public List<String> getTags() {
-        return tags.getAll();
-    }
-
-    public List<String> getArtist() {
-        return getAllTags().getArtist();
+        return tags;
     }
 
     @Override
     public String getURL() {
         return getFile().getUrl();
-    }
-
-    @Override
-    public boolean hasChildren() {
-        return isHas_children();
     }
 
     @Override
